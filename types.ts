@@ -51,7 +51,8 @@ export interface PaperMetadata {
 export enum AppMode {
   BANK = 'BANK',
   PAPER = 'PAPER',
-  ADMIN = 'ADMIN'
+  ADMIN = 'ADMIN',
+  PREVIEW = 'PREVIEW'
 }
 
 export enum UserRole {

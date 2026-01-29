@@ -24,12 +24,16 @@ import {
   Maximize2,
   Minimize2,
   Key,
-  Eye
+  Eye,
+  ArrowLeft,
+  Loader2,
+  FileDown as PdfIcon
 } from 'lucide-react';
 import { Question, PaperMetadata, Section } from '../types';
 import { apiService } from '../apiService';
 import { exportPaperToWord } from '../utils/DocxExporter';
 import { exportPaperToRtf } from '../utils/RtfExporter';
+import { exportPaperToPdf } from '../utils/PdfExporter';
 import saveAs from 'file-saver';
 
 interface Props {
@@ -39,17 +43,20 @@ interface Props {
   sections: Section[];
   onSectionsChange: (sections: Section[]) => void;
   onRefreshQuestions?: () => void;
+  onReturn?: () => void;
+  onPreviewDraft?: () => void;
 }
 
 const cleanText = (text: string) => {
   return text.replace(/^\[item[-_ ]?\d+\]\s*/i, '').replace(/ \[Set \d+-\d+\]$/i, '').trim();
 };
 
-const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadataChange, sections, onSectionsChange, onRefreshQuestions }) => {
+const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadataChange, sections, onSectionsChange, onRefreshQuestions, onReturn, onPreviewDraft }) => {
   const [activeSectionId, setActiveSectionId] = useState<string | null>(null);
   const [editingQuestion, setEditingQuestion] = useState<Partial<Question> | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const [isExportingPdf, setIsExportingPdf] = useState(false);
   
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
 
@@ -142,8 +149,29 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
   const globalSelectedIds = useMemo(() => sections.reduce((acc, s) => [...acc, ...s.selectedQuestionIds], [] as number[]), [sections]);
   const totalAllocatedMarks = useMemo(() => sections.reduce((sum, s) => sum + s.sectionMarks, 0), [sections]);
   
-  const isMetadataValid = metadata.totalMarks > 0 && metadata.duration.trim().length > 0;
-  const isAligned = totalAllocatedMarks === metadata.totalMarks && metadata.totalMarks >= 1 && isMetadataValid;
+  const isAligned = useMemo(() => {
+    // metadata compulsory checks - removed title and duration
+    const metaComplete = 
+      metadata.subject.trim().length > 0 &&
+      metadata.grade.trim().length > 0 &&
+      metadata.totalMarks > 0;
+
+    if (!metaComplete) return false;
+    if (sections.length === 0) return false;
+
+    // goals match check
+    const goalsMatch = totalAllocatedMarks === metadata.totalMarks;
+    if (!goalsMatch) return false;
+
+    // section completeness check (number of questions matches section mark goal)
+    const allSectionsFull = sections.every(s => 
+      s.sectionMarks > 0 && 
+      s.marksPerQuestion > 0 && 
+      (s.selectedQuestionIds.length * s.marksPerQuestion === s.sectionMarks)
+    );
+    
+    return allSectionsFull;
+  }, [sections, metadata, totalAllocatedMarks]);
 
   const handleExportWord = () => {
     if (!isAligned) return;
@@ -154,6 +182,14 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
   const handleExportRtf = () => {
     if (!isAligned) return;
     exportPaperToRtf(metadata, sections, questions);
+    setIsExportMenuOpen(false);
+  };
+
+  const handleExportPdf = async () => {
+    if (!isAligned) return;
+    setIsExportingPdf(true);
+    await exportPaperToPdf(metadata);
+    setIsExportingPdf(false);
     setIsExportMenuOpen(false);
   };
 
@@ -185,7 +221,7 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
     if (!isAligned) return;
     const selectedQuestions = questions.filter(q => globalSelectedIds.includes(q.id));
     const autogradePayload = {
-      source: 'Chrysalis QP Generator',
+      source: 'Chrysalis QP Designer',
       version: '2.0',
       timestamp: new Date().toISOString(),
       metadata,
@@ -216,6 +252,23 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
 
   return (
     <div className="space-y-6 md:space-y-8 pb-32 md:pb-24 relative">
+      <div className="sticky top-[64px] md:top-[80px] z-50 bg-white/90 backdrop-blur-md px-4 md:px-8 py-4 md:py-6 rounded-2xl border-2 border-slate-500 shadow-[0_12px_40px_-10px_rgba(0,0,0,0.3)] flex items-center justify-between mb-8">
+        <div className="space-y-1">
+          <h1 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">Paper Designer</h1>
+          <p className="hidden xs:flex text-slate-500 font-black text-[9px] md:text-[10px] uppercase tracking-[0.3em] items-center gap-2">
+            <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
+            Exam Structuring
+          </p>
+        </div>
+        
+        <button 
+          onClick={onReturn}
+          className="text-[8px] md:text-[9px] font-black text-indigo-700 uppercase tracking-widest bg-white border-2 md:border-4 border-slate-300 px-3 md:px-6 py-2 md:py-3 rounded-xl flex items-center gap-2 hover:bg-slate-50 transition-all shadow-md active:scale-95"
+        >
+          <ArrowLeft size={14} className="md:w-4" strokeWidth={3} /> <span className="hidden xs:inline">Reset & Return</span><span className="xs:hidden">Return</span>
+        </button>
+      </div>
+
       <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-[0_12px_60px_-15px_rgba(0,0,0,0.3)] border-4 border-slate-500 p-4 md:p-8 space-y-4 md:space-y-6 relative overflow-hidden">
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-32 md:w-48 h-32 md:h-48 bg-indigo-50/50 rounded-full blur-3xl opacity-60"></div>
         
@@ -227,7 +280,7 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
              <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight leading-none">Paper Config</h2>
              <p className="text-[7px] md:text-[9px] font-black text-slate-600 uppercase tracking-widest mt-1 md:mt-1.5 flex items-center gap-2">
                <span className="w-1 md:w-1.5 h-1 md:h-1.5 bg-indigo-600 rounded-full animate-pulse"></span>
-               Branding & Compulsory Parameters
+               Branding & Parameters
              </p>
            </div>
         </div>
@@ -257,7 +310,7 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
 
           <div className="md:col-span-9 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
              <div className="md:col-span-2 space-y-1">
-                <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Examination Title</label>
+                <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Examination Title (Optional)</label>
                 <input type="text" value={metadata.title} onChange={e => onMetadataChange({...metadata, title: e.target.value})} className="w-full bg-white border-2 border-slate-400 rounded-xl px-3 md:px-4 py-2 md:py-2.5 text-[10px] md:text-xs font-bold text-slate-800 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all shadow-sm" placeholder="e.g. Mid-Term Summative" />
              </div>
              <div className="space-y-1">
@@ -268,14 +321,14 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                 </div>
              </div>
              <div className="space-y-1">
-                <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Time Limit (Compulsory) *</label>
+                <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Time Limit (Optional)</label>
                 <div className="relative">
-                  <Clock className={`absolute left-3 md:left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 md:w-4 md:h-4 ${!metadata.duration ? 'text-rose-500' : 'text-slate-500'}`} />
+                  <Clock className="absolute left-3 md:left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 md:w-4 md:h-4 text-slate-500" />
                   <input 
                     type="text" 
                     value={metadata.duration} 
                     onChange={e => onMetadataChange({...metadata, duration: e.target.value})} 
-                    className={`w-full bg-white border-2 rounded-xl pl-9 md:pl-10 pr-4 py-2 md:py-2.5 text-[10px] md:text-xs font-bold text-slate-800 focus:ring-4 focus:ring-indigo-100 transition-all shadow-sm ${!metadata.duration ? 'border-rose-300 bg-rose-50/20' : 'border-slate-400 focus:border-indigo-600'}`}
+                    className="w-full bg-white border-2 border-slate-400 rounded-xl pl-9 md:pl-10 pr-4 py-2 md:py-2.5 text-[10px] md:text-xs font-bold text-slate-800 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all shadow-sm"
                     placeholder="e.g. 2 Hours"
                   />
                 </div>
@@ -321,9 +374,9 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
         <div className="space-y-4">
           {sections.map((section, idx) => {
             const isActive = activeSectionId === section.id;
-            const needed = section.marksPerQuestion > 0 ? Math.floor(section.sectionMarks / section.marksPerQuestion) : 0;
             const allocated = section.selectedQuestionIds.length * section.marksPerQuestion;
             const isFull = section.sectionMarks > 0 && allocated === section.sectionMarks;
+            const needed = section.marksPerQuestion > 0 ? Math.floor(section.sectionMarks / section.marksPerQuestion) : 0;
             const eligible = questions.filter(q => q.question_type === section.questionType && q.marks === section.marksPerQuestion);
 
             return (
@@ -437,7 +490,6 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                                 </div>
                                 <div className="flex-1 flex flex-col gap-1 md:gap-1.5">
                                    <div className="flex flex-col md:flex-row gap-3 md:items-start">
-                                      {/* Requirement: Show question image preview while working with QP */}
                                       {q.image_url && (
                                         <div className="shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden border-2 border-slate-200 bg-slate-50 shadow-inner group-hover:scale-105 transition-transform">
                                            <img src={q.image_url} alt="Item Preview" className="w-full h-full object-cover" />
@@ -519,6 +571,12 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                         <div className="px-4 py-2 border-b-2 border-slate-200 mb-2">
                           <span className="text-[8px] md:text-[9px] font-black text-slate-600 uppercase tracking-widest">Production Suite</span>
                         </div>
+                        <button onClick={handleExportPdf} disabled={isExportingPdf} className="w-full flex items-center gap-4 px-4 py-3.5 hover:bg-rose-50 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-900 transition-all group text-left">
+                          <div className="w-7 h-7 md:w-8 md:h-8 bg-rose-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform border-2 border-rose-200 shadow-sm">
+                            {isExportingPdf ? <Loader2 className="animate-spin w-4 h-4 text-rose-700" /> : <PdfIcon className="w-4 h-4 text-rose-700" />}
+                          </div> 
+                          {isExportingPdf ? 'Generating...' : 'Download as PDF'}
+                        </button>
                         <button onClick={handleExportWord} className="w-full flex items-center gap-4 px-4 py-3.5 hover:bg-indigo-50 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-900 transition-all group text-left">
                           <div className="w-7 h-7 md:w-8 md:h-8 bg-blue-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform border-2 border-blue-200 shadow-sm">
                             <FileText className="w-4 h-4 text-blue-700" />
@@ -542,7 +600,7 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                           <div className="w-7 h-7 md:w-8 md:h-8 bg-slate-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform border-2 border-slate-300 group-hover:text-white shadow-sm">
                             <Printer className="w-4 h-4" />
                           </div> 
-                          Print / Export to PDF
+                          Standard Print Menu
                         </button>
                       </div>
                     )}
@@ -559,14 +617,14 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
               ) : (
                 <>
                   <button 
-                    onClick={() => window.print()}
+                    onClick={onPreviewDraft}
                     className="flex-1 md:flex-initial h-11 md:h-14 px-6 md:px-10 rounded-xl md:rounded-[1.25rem] font-black text-[9px] md:text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 md:gap-3 whitespace-nowrap border-2 md:border-4 border-slate-300 bg-white text-slate-500 hover:bg-slate-50 active:scale-95 shadow-sm"
                   >
                     <Eye className="w-4 h-4 md:w-5 md:h-5" />
                     Preview Draft
                   </button>
                   <div className="hidden lg:flex items-center gap-2 px-6 py-3 bg-amber-50 border-2 border-amber-200 rounded-xl text-amber-800 text-[8px] font-black uppercase tracking-widest animate-pulse">
-                    <AlertCircle size={14} /> Align marks to unlock exports
+                    <AlertCircle size={14} /> Criteria incomplete to unlock exports
                   </div>
                 </>
               )}

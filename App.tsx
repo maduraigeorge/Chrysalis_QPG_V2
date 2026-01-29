@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { 
   Settings,
   X,
@@ -21,7 +21,10 @@ import {
   UserCheck,
   ShieldAlert,
   Filter,
-  Menu
+  Menu,
+  AlertCircle,
+  FileWarning,
+  Loader2
 } from 'lucide-react';
 import { AppMode, Question, PaperMetadata, Section, UserRole } from './types';
 import SelectionPanel from './components/SelectionPanel';
@@ -30,12 +33,14 @@ import QuestionPaperCreator from './components/QuestionPaperCreator';
 import PaperPreview from './components/PaperPreview';
 import AdminPanel from './components/AdminPanel';
 import { apiService } from './apiService';
+import { exportPaperToPdf } from './utils/PdfExporter';
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<AppMode>(AppMode.BANK);
   const [role, setRole] = useState<UserRole>(UserRole.TEACHER);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [loading, setLoading] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
   const [dbInitializing, setDbInitializing] = useState(true);
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<number[]>([]);
   const [lastFilters, setLastFilters] = useState<{ subject: string; grade: string; lessonIds: number[]; loIds: number[] } | null>(null);
@@ -73,6 +78,36 @@ const App: React.FC = () => {
     init();
   }, []);
 
+  const isPaperAligned = useMemo(() => {
+    // 1. Check if all compulsory metadata values are filled
+    // Removed title and duration from mandatory checks
+    const isMetadataComplete = 
+      paperMetadata.subject.trim().length > 0 &&
+      paperMetadata.grade.trim().length > 0 &&
+      paperMetadata.totalMarks > 0;
+
+    if (!isMetadataComplete) return false;
+
+    // 2. Check if there are sections defined
+    if (sections.length === 0) return false;
+
+    // 3. Check if total section goals match the paper's maximum marks
+    const totalAllocatedMarks = sections.reduce((sum, s) => sum + s.sectionMarks, 0);
+    const goalsMatch = totalAllocatedMarks === paperMetadata.totalMarks;
+
+    if (!goalsMatch) return false;
+
+    // 4. Strict check: Every section must be fully populated with questions 
+    // AND number of questions * marks per question must exactly equal the section's mark goal
+    const allSectionsComplete = sections.every(s => 
+      s.sectionMarks > 0 && 
+      s.marksPerQuestion > 0 &&
+      (s.selectedQuestionIds.length * s.marksPerQuestion === s.sectionMarks)
+    );
+
+    return allSectionsComplete;
+  }, [sections, paperMetadata]);
+
   const handleScopeChange = async (filters: { subject: string; grade: string; lessonIds: number[]; loIds: number[] }) => {
     setLoading(true);
     setLastFilters(filters);
@@ -80,11 +115,9 @@ const App: React.FC = () => {
     try {
       const data = await apiService.getQuestions(filters);
       setQuestions(data);
-      // Requirement: Let all questions be selected by default
       setSelectedQuestionIds(data.map(q => q.id)); 
       setPaperMetadata(prev => ({ ...prev, subject: filters.subject, grade: filters.grade }));
       
-      // Scroll to Question Bank after sync for better UX in the stacked layout
       setTimeout(() => {
         const target = document.getElementById('question-listing-top');
         if (target) {
@@ -146,6 +179,13 @@ const App: React.FC = () => {
     resetTopicSelector();
   };
 
+  const handleDownloadPdf = async () => {
+    if (!isPaperAligned) return;
+    setIsExporting(true);
+    await exportPaperToPdf(paperMetadata);
+    setIsExporting(false);
+  };
+
   if (dbInitializing) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-white font-black text-center relative overflow-hidden">
@@ -162,9 +202,6 @@ const App: React.FC = () => {
       </div>
     );
   }
-
-  const isPaperMode = mode === AppMode.PAPER;
-  const isBankMode = mode === AppMode.BANK;
 
   return (
     <div className="min-h-screen bg-[#f8fafc] flex flex-col selection:bg-indigo-100 relative">
@@ -195,7 +232,7 @@ const App: React.FC = () => {
             </button>
             <button 
               onClick={() => setMode(AppMode.PAPER)}
-              className={`px-3 md:px-6 py-2 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1 md:gap-2 ${mode === AppMode.PAPER ? 'bg-white text-indigo-600 shadow-md scale-105 border border-slate-300' : 'text-slate-500 hover:text-slate-800'}`}
+              className={`px-3 md:px-6 py-2 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1 md:gap-2 ${mode === AppMode.PAPER || mode === AppMode.PREVIEW ? 'bg-white text-indigo-600 shadow-md scale-105 border border-slate-300' : 'text-slate-500 hover:text-slate-800'}`}
             >
               <LayoutDashboard size={12} className="md:w-[14px]" /> <span className="hidden sm:inline">Paper Designer</span><span className="sm:hidden">Designer</span>
             </button>
@@ -254,9 +291,53 @@ const App: React.FC = () => {
       <main className="flex-1 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-4 md:py-8 no-print pb-32">
         {mode === AppMode.ADMIN ? (
           <div className="w-full"><AdminPanel /></div>
+        ) : mode === AppMode.PREVIEW ? (
+          <div className="max-w-[1100px] mx-auto w-full space-y-8 animate-in fade-in duration-500">
+             <div className="flex items-center justify-between px-1">
+                <button 
+                  onClick={() => setMode(AppMode.PAPER)}
+                  className="bg-white text-slate-900 border-2 border-slate-400 px-6 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 shadow-xl active:scale-95 hover:bg-slate-50 transition-all"
+                >
+                   <ArrowLeft size={16} strokeWidth={3} /> Return to Designer
+                </button>
+                
+                <div className="flex items-center gap-4">
+                  {!isPaperAligned && (
+                    <div className="flex items-center gap-2 px-4 py-2 bg-amber-50 border-2 border-amber-200 rounded-xl text-amber-800 text-[9px] font-black uppercase tracking-widest shadow-sm">
+                      <FileWarning size={14} className="text-amber-600" /> Draft: Criteria Incomplete
+                    </div>
+                  )}
+                  {isPaperAligned ? (
+                    <div className="flex items-center gap-3">
+                       <button 
+                        onClick={handleDownloadPdf}
+                        disabled={isExporting}
+                        className="bg-rose-600 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 shadow-xl active:scale-95 border-2 border-rose-400 hover:brightness-110 transition-all disabled:opacity-50"
+                      >
+                         {isExporting ? <Loader2 className="animate-spin" size={16} /> : <Download size={16} strokeWidth={3} />} 
+                         Download Final PDF
+                      </button>
+                      <button 
+                        onClick={() => window.print()}
+                        className="bg-indigo-700 text-white px-8 py-3 rounded-xl font-black text-[10px] uppercase tracking-widest flex items-center gap-3 shadow-xl active:scale-95 border-2 border-indigo-400 hover:brightness-110 transition-all"
+                      >
+                         <Printer size={16} strokeWidth={3} /> Print
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 px-4 py-3 bg-slate-100 border-2 border-slate-300 rounded-xl text-slate-400 text-[9px] font-black uppercase tracking-widest cursor-not-allowed">
+                       <Lock size={14} /> Download Restricted
+                    </div>
+                  )}
+                </div>
+             </div>
+             <div className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border-2 border-slate-200">
+                <PaperPreview mode={mode} metadata={paperMetadata} sections={sections} questions={questions} selectedBankQuestionIds={selectedQuestionIds} />
+             </div>
+          </div>
         ) : (
           <div className="w-full">
-            {isBankMode ? (
+            {mode === AppMode.BANK ? (
               <div className="space-y-8 md:space-y-12">
                 <div className="w-full animate-in fade-in slide-in-from-top-4 duration-500">
                   <SelectionPanel key={selectionKey} onScopeChange={handleScopeChange} />
@@ -286,30 +367,14 @@ const App: React.FC = () => {
             ) : (
               <section className="flex-1 max-w-[1100px] mx-auto w-full">
                 <div className="space-y-6 md:space-y-8">
-                  {/* Sticky Paper Designer Header */}
-                  <div className="sticky top-[64px] md:top-[80px] z-50 bg-white/90 backdrop-blur-md px-4 md:px-8 py-4 md:py-6 rounded-2xl border-2 border-slate-500 shadow-[0_12px_40px_-10px_rgba(0,0,0,0.3)] flex items-center justify-between mb-8">
-                    <div className="space-y-1">
-                      <h1 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">Paper Designer</h1>
-                      <p className="hidden xs:flex text-slate-500 font-black text-[9px] md:text-[10px] uppercase tracking-[0.3em] items-center gap-2">
-                        <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
-                        Exam Structuring
-                      </p>
-                    </div>
-                    
-                    <button 
-                      onClick={handleReturnToBank}
-                      className="text-[8px] md:text-[9px] font-black text-indigo-700 uppercase tracking-widest bg-white border-2 md:border-4 border-slate-300 px-3 md:px-6 py-2 md:py-3 rounded-xl flex items-center gap-2 hover:bg-slate-50 transition-all shadow-md active:scale-95"
-                    >
-                      <ArrowLeft size={14} className="md:w-4" strokeWidth={3} /> <span className="hidden xs:inline">Reset & Return</span><span className="xs:hidden">Return</span>
-                    </button>
-                  </div>
-
                   <QuestionPaperCreator 
                     questions={questions}
                     metadata={paperMetadata}
                     onMetadataChange={setPaperMetadata}
                     sections={sections}
                     onSectionsChange={setSections}
+                    onReturn={handleReturnToBank}
+                    onPreviewDraft={() => setMode(AppMode.PREVIEW)}
                   />
                 </div>
               </section>
