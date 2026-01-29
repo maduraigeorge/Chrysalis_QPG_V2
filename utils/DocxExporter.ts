@@ -1,7 +1,7 @@
 
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, ImageRun, Footer, PageNumber, PageBreak } from 'docx';
 import saveAs from 'file-saver';
-import { Question, PaperMetadata, Section } from '../types';
+import { Question, PaperMetadata, Section } from '../types.ts';
 
 const cleanText = (text: string) => {
   return text.replace(/^\[item[-_ ]?\d+\]\s*/i, '').replace(/ \[Set \d+-\d+\]$/i, '').trim();
@@ -172,14 +172,14 @@ export const exportPaperToWord = async (metadata: PaperMetadata, sections: Secti
     rows: [
       new TableRow({
         children: [
-          new TableCell({ children: [new Paragraph({ text: `Subject: ${metadata.subject}`, size: 18 })] }),
-          new TableCell({ children: [new Paragraph({ text: `Grade: ${metadata.grade}`, alignment: AlignmentType.RIGHT, size: 18 })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Subject: ${metadata.subject}`, size: 18 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Grade: ${metadata.grade}`, size: 18 })], alignment: AlignmentType.RIGHT })] }),
         ],
       }),
       new TableRow({
         children: [
-          new TableCell({ children: [new Paragraph({ text: metadata.duration ? `Duration: ${metadata.duration}` : "", size: 18 })] }),
-          new TableCell({ children: [new Paragraph({ text: `Marks: ${metadata.totalMarks}`, alignment: AlignmentType.RIGHT, size: 18 })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: metadata.duration ? `Duration: ${metadata.duration}` : "", size: 18 })] })] }),
+          new TableCell({ children: [new Paragraph({ children: [new TextRun({ text: `Marks: ${metadata.totalMarks}`, size: 18 })], alignment: AlignmentType.RIGHT })] }),
         ],
       }),
     ],
@@ -193,9 +193,8 @@ export const exportPaperToWord = async (metadata: PaperMetadata, sections: Secti
       spacing: { after: 40 }
     }));
     children.push(new Paragraph({
-      text: metadata.instructions,
-      spacing: { after: 150 },
-      size: 16
+      children: [new TextRun({ text: metadata.instructions, size: 16 })],
+      spacing: { after: 150 }
     }));
   }
 
