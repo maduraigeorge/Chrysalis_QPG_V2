@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Plus, 
   Trash2, 
@@ -27,13 +27,15 @@ import {
   Eye,
   ArrowLeft,
   Loader2,
-  FileDown as PdfIcon
+  FileDown as PdfIcon,
+  Target,
+  LayoutDashboard
 } from 'lucide-react';
-import { Question, PaperMetadata, Section } from '../types';
-import { apiService } from '../apiService';
-import { exportPaperToWord } from '../utils/DocxExporter';
-import { exportPaperToRtf } from '../utils/RtfExporter';
-import { exportPaperToPdf } from '../utils/PdfExporter';
+import { Question, PaperMetadata, Section } from '../types.ts';
+import { apiService } from '../apiService.ts';
+import { exportPaperToWord } from '../utils/DocxExporter.ts';
+import { exportPaperToRtf } from '../utils/RtfExporter.ts';
+import { exportPaperToPdf } from '../utils/PdfExporter.ts';
 import saveAs from 'file-saver';
 
 interface Props {
@@ -48,7 +50,7 @@ interface Props {
 }
 
 const cleanText = (text: string) => {
-  return text.replace(/^\[item[-_ ]?\d+\]\s*/i, '').replace(/ \[Set \d+-\d+\]$/i, '').trim();
+  return text.replace(/^\[item[_\- ]?\d+\]\s*/i, '').replace(/\s*\[Set \d+\-\d+\]$/i, '').trim();
 };
 
 const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadataChange, sections, onSectionsChange, onRefreshQuestions, onReturn, onPreviewDraft }) => {
@@ -57,8 +59,19 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const [isExportingPdf, setIsExportingPdf] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
   
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setIsExportMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const addSection = () => {
     const id = Math.random().toString(36).substr(2, 9);
@@ -150,7 +163,6 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
   const totalAllocatedMarks = useMemo(() => sections.reduce((sum, s) => sum + s.sectionMarks, 0), [sections]);
   
   const isAligned = useMemo(() => {
-    // metadata compulsory checks - removed title and duration
     const metaComplete = 
       metadata.subject.trim().length > 0 &&
       metadata.grade.trim().length > 0 &&
@@ -159,11 +171,9 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
     if (!metaComplete) return false;
     if (sections.length === 0) return false;
 
-    // goals match check
     const goalsMatch = totalAllocatedMarks === metadata.totalMarks;
     if (!goalsMatch) return false;
 
-    // section completeness check (number of questions matches section mark goal)
     const allSectionsFull = sections.every(s => 
       s.sectionMarks > 0 && 
       s.marksPerQuestion > 0 && 
@@ -252,20 +262,25 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
 
   return (
     <div className="space-y-6 md:space-y-8 pb-32 md:pb-24 relative">
-      <div className="sticky top-[64px] md:top-[80px] z-50 bg-white/90 backdrop-blur-md px-4 md:px-8 py-4 md:py-6 rounded-2xl border-2 border-slate-500 shadow-[0_12px_40px_-10px_rgba(0,0,0,0.3)] flex items-center justify-between mb-8">
-        <div className="space-y-1">
-          <h1 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">Paper Designer</h1>
-          <p className="hidden xs:flex text-slate-500 font-black text-[9px] md:text-[10px] uppercase tracking-[0.3em] items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
-            Exam Structuring
-          </p>
+      <div className="sticky top-[64px] md:top-[80px] z-50 bg-white/95 backdrop-blur-md px-4 md:px-8 py-2 md:py-3.5 rounded-2xl border-2 border-slate-500 shadow-[0_12px_40px_-10px_rgba(0,0,0,0.3)] flex items-center justify-between mb-8 transition-all duration-300">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-700 rounded-xl flex items-center justify-center text-white shadow-md border border-indigo-500 shrink-0">
+             <LayoutDashboard size={18} className="md:w-5 md:h-5" strokeWidth={3} />
+          </div>
+          <div className="space-y-0.5">
+            <h1 className="text-lg md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Paper Designer</h1>
+            <p className="hidden xs:flex text-slate-500 font-black text-[7px] md:text-[8px] uppercase tracking-[0.2em] items-center gap-1.5">
+              <span className="w-1 h-1 bg-indigo-500 rounded-full"></span>
+              Structure Exam Layout
+            </p>
+          </div>
         </div>
         
         <button 
           onClick={onReturn}
-          className="text-[8px] md:text-[9px] font-black text-indigo-700 uppercase tracking-widest bg-white border-2 md:border-4 border-slate-300 px-3 md:px-6 py-2 md:py-3 rounded-xl flex items-center gap-2 hover:bg-slate-50 transition-all shadow-md active:scale-95"
+          className="text-[8px] md:text-[9px] font-black text-indigo-700 uppercase tracking-widest bg-white border-2 md:border-3 border-slate-300 px-3 md:px-5 py-1.5 md:py-2.5 rounded-xl flex items-center gap-2 hover:bg-slate-50 transition-all shadow-md active:scale-95"
         >
-          <ArrowLeft size={14} className="md:w-4" strokeWidth={3} /> <span className="hidden xs:inline">Reset & Return</span><span className="xs:hidden">Return</span>
+          <ArrowLeft size={14} className="md:w-4" strokeWidth={3} /> <span className="hidden xs:inline">Return to Bank</span><span className="xs:hidden">Return</span>
         </button>
       </div>
 
@@ -277,10 +292,10 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
              <ClipboardList className="w-5 h-5 md:w-6 md:h-6" />
            </div>
            <div>
-             <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight leading-none">Paper Config</h2>
+             <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight leading-none">Global Config</h2>
              <p className="text-[7px] md:text-[9px] font-black text-slate-600 uppercase tracking-widest mt-1 md:mt-1.5 flex items-center gap-2">
                <span className="w-1 md:w-1.5 h-1 md:h-1.5 bg-indigo-600 rounded-full animate-pulse"></span>
-               Branding & Parameters
+               Identity & Constraints
              </p>
            </div>
         </div>
@@ -294,7 +309,7 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                ) : (
                  <>
                    <ImageIcon className="text-slate-400 group-hover:text-indigo-600 transition-colors w-6 h-6 md:w-8 md:h-8" strokeWidth={3} />
-                   <span className="text-[7px] md:text-[8px] font-black text-slate-500 uppercase tracking-widest text-center px-4 mt-2 leading-relaxed">Institutional Branding</span>
+                   <span className="text-[7px] md:text-[8px] font-black text-slate-500 uppercase tracking-widest text-center px-4 mt-2 leading-relaxed">Identity Branding</span>
                  </>
                )}
                <input type="file" accept="image/*" onChange={e => {
@@ -310,18 +325,18 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
 
           <div className="md:col-span-9 grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
              <div className="md:col-span-2 space-y-1">
-                <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Examination Title (Optional)</label>
-                <input type="text" value={metadata.title} onChange={e => onMetadataChange({...metadata, title: e.target.value})} className="w-full bg-white border-2 border-slate-400 rounded-xl px-3 md:px-4 py-2 md:py-2.5 text-[10px] md:text-xs font-bold text-slate-800 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all shadow-sm" placeholder="e.g. Mid-Term Summative" />
+                <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Examination Title</label>
+                <input type="text" value={metadata.title} onChange={e => onMetadataChange({...metadata, title: e.target.value})} className="w-full bg-white border-2 border-slate-400 rounded-xl px-3 md:px-4 py-2 md:py-2.5 text-[10px] md:text-xs font-bold text-slate-800 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all shadow-sm" placeholder="e.g. Annual Summative Exam 2024-25" />
              </div>
-             <div className="space-y-1">
+             <div className="md:col-span-2 space-y-1">
                 <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">School Name</label>
                 <div className="relative">
                   <Building2 className="absolute left-3 md:left-3.5 top-1/2 -translate-y-1/2 text-slate-500 w-3.5 h-3.5 md:w-4 md:h-4" />
-                  <input type="text" value={metadata.schoolName} onChange={e => onMetadataChange({...metadata, schoolName: e.target.value})} className="w-full bg-white border-2 border-slate-400 rounded-xl pl-9 md:pl-10 pr-4 py-2 md:py-2.5 text-[10px] md:text-xs font-bold text-slate-800 focus:border-indigo-600 transition-all shadow-sm" placeholder="Institution Name" />
+                  <input type="text" value={metadata.schoolName} onChange={e => onMetadataChange({...metadata, schoolName: e.target.value})} className="w-full bg-white border-2 border-slate-400 rounded-xl pl-9 md:pl-10 pr-4 py-2 md:py-2.5 text-[10px] md:text-xs font-bold text-slate-800 focus:border-indigo-600 transition-all shadow-sm" placeholder="Institution Designation" />
                 </div>
              </div>
-             <div className="space-y-1">
-                <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Time Limit (Optional)</label>
+             <div className="md:col-span-1 space-y-1">
+                <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Time Limit</label>
                 <div className="relative">
                   <Clock className="absolute left-3 md:left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 md:w-4 md:h-4 text-slate-500" />
                   <input 
@@ -329,12 +344,12 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                     value={metadata.duration} 
                     onChange={e => onMetadataChange({...metadata, duration: e.target.value})} 
                     className="w-full bg-white border-2 border-slate-400 rounded-xl pl-9 md:pl-10 pr-4 py-2 md:py-2.5 text-[10px] md:text-xs font-bold text-slate-800 focus:border-indigo-600 focus:ring-4 focus:ring-indigo-100 transition-all shadow-sm"
-                    placeholder="e.g. 2 Hours"
+                    placeholder="e.g. 180 Minutes"
                   />
                 </div>
              </div>
-             <div className="space-y-1">
-                <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Max Marks (Compulsory) *</label>
+             <div className="md:col-span-1 space-y-1">
+                <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Paper Max Marks *</label>
                 <div className="relative">
                   <Calculator className={`absolute left-3 md:left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 md:w-4 md:h-4 ${metadata.totalMarks <= 0 ? 'text-rose-500' : 'text-slate-500'}`} />
                   <input 
@@ -343,13 +358,13 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                     value={metadata.totalMarks || ''} 
                     onChange={e => onMetadataChange({...metadata, totalMarks: Math.max(0, Number(e.target.value))})} 
                     className={`w-full bg-white border-2 rounded-xl pl-9 md:pl-10 pr-4 py-2 md:py-2.5 text-[10px] md:text-xs font-black focus:ring-4 focus:ring-indigo-100 transition-all shadow-sm ${metadata.totalMarks <= 0 ? 'border-rose-300 bg-rose-50/20 text-rose-700' : 'border-slate-400 border-indigo-600 text-indigo-700'}`}
-                    placeholder="Min 1"
+                    placeholder="Global limit"
                   />
                 </div>
              </div>
              <div className="md:col-span-2 space-y-1">
-                <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Instructions</label>
-                <textarea rows={2} value={metadata.instructions} onChange={e => onMetadataChange({...metadata, instructions: e.target.value})} className="w-full bg-white border-2 border-slate-400 rounded-xl px-4 py-2 md:py-3 text-[10px] md:text-xs font-medium text-slate-800 focus:border-indigo-600 transition-all shadow-sm resize-none" placeholder="1. All questions are compulsory..."></textarea>
+                <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Instructions & Guidelines</label>
+                <textarea rows={2} value={metadata.instructions} onChange={e => onMetadataChange({...metadata, instructions: e.target.value})} className="w-full bg-white border-2 border-slate-400 rounded-xl px-4 py-2 md:py-3 text-[10px] md:text-xs font-medium text-slate-800 focus:border-indigo-600 transition-all shadow-sm resize-none" placeholder="Enter behavioral expectations for examinees..."></textarea>
              </div>
           </div>
         </div>
@@ -443,11 +458,19 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                          <label className="text-[7px] md:text-[8px] font-black text-slate-700 uppercase tracking-widest ml-1">Weight / Item</label>
                          <input type="number" min="0" value={section.marksPerQuestion} onChange={e => updateSection(section.id, { marksPerQuestion: Math.max(0, Number(e.target.value)), selectedQuestionIds: [] })} className="w-full bg-white border-2 border-slate-400 rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 text-[10px] md:text-xs font-black text-slate-900 shadow-sm" />
                       </div>
-                      <div className="space-y-1.5 col-span-2 md:col-span-1">
-                         <label className="text-[7px] md:text-[8px] font-black text-slate-700 uppercase tracking-widest ml-1">Section Goal</label>
-                         <input type="number" min="0" value={section.sectionMarks} onChange={e => updateSection(section.id, { sectionMarks: Math.max(0, Number(e.target.value)), selectedQuestionIds: [] })} className="w-full bg-white border-2 border-slate-400 rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 text-[10px] md:text-xs font-black text-indigo-800 shadow-sm" />
+                      {/* Field for sectionMarks */}
+                      <div className="space-y-1.5">
+                         <label className="text-[7px] md:text-[8px] font-black text-slate-700 uppercase tracking-widest ml-1">Section Target Marks</label>
+                         <input 
+                            type="number" 
+                            min="1" 
+                            value={section.sectionMarks} 
+                            onChange={e => updateSection(section.id, { sectionMarks: Math.max(0, Number(e.target.value)), selectedQuestionIds: [] })} 
+                            className={`w-full bg-white border-2 rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 text-[10px] md:text-xs font-black focus:border-indigo-600 shadow-sm ${section.sectionMarks <= 0 ? 'border-rose-400 text-rose-700 bg-rose-50/50' : 'border-slate-400 text-slate-900'}`} 
+                            placeholder="Target marks"
+                          />
                       </div>
-                      <div className="col-span-2 md:col-span-4 flex justify-end">
+                      <div className="space-y-1.5 col-span-2 md:col-span-4 flex justify-end mt-2">
                          <button onClick={() => openQuestionModal(section)} className="w-full md:w-auto bg-indigo-700 border-2 border-indigo-500 text-white px-4 py-2 rounded-lg text-[8px] md:text-[9px] font-black uppercase tracking-widest hover:brightness-110 shadow-lg active:scale-95">
                            New Custom Question
                          </button>
@@ -556,7 +579,7 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
             <div className="flex items-center gap-2 md:gap-4 shrink-0 w-full md:w-auto">
               {isAligned ? (
                 <>
-                  <div className="relative flex-1 md:flex-initial">
+                  <div className="relative flex-1 md:flex-initial" ref={exportMenuRef}>
                     <button 
                       onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
                       className="w-full flex items-center justify-center gap-2 bg-white text-slate-950 px-4 md:px-6 py-2.5 md:py-3 rounded-xl font-black text-[9px] md:text-[10px] uppercase tracking-widest shadow-2xl hover:bg-slate-50 transition-all border-2 md:border-4 border-slate-400 active:scale-95 whitespace-nowrap"

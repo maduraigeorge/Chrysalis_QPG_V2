@@ -19,6 +19,12 @@ import { apiService } from '../apiService';
 import { SUBJECTS, GRADES } from '../constants';
 
 interface Props {
+  initialFilters: {
+    subject: string;
+    grade: string;
+    lessonIds: number[];
+    loIds: number[];
+  };
   onScopeChange: (filters: { 
     subject: string; 
     grade: string; 
@@ -27,24 +33,46 @@ interface Props {
   }) => void;
 }
 
-const SelectionPanel: React.FC<Props> = ({ onScopeChange }) => {
-  const [isExpanded, setIsExpanded] = useState(true);
-  const [selectedSubject, setSelectedSubject] = useState('');
-  const [selectedGrade, setSelectedGrade] = useState('');
+const SelectionPanel: React.FC<Props> = ({ initialFilters, onScopeChange }) => {
+  const [isExpanded, setIsExpanded] = useState(initialFilters.subject === '');
+  const [selectedSubject, setSelectedSubject] = useState(initialFilters.subject);
+  const [selectedGrade, setSelectedGrade] = useState(initialFilters.grade);
   const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [selectedLessonIds, setSelectedLessonIds] = useState<number[]>([]);
+  const [selectedLessonIds, setSelectedLessonIds] = useState<number[]>(initialFilters.lessonIds);
   const [learningOutcomes, setLearningOutcomes] = useState<LearningOutcome[]>([]);
-  const [selectedLoIds, setSelectedLoIds] = useState<number[]>([]);
+  const [selectedLoIds, setSelectedLoIds] = useState<number[]>(initialFilters.loIds);
   
   const [expandedLessonIds, setExpandedLessonIds] = useState<number[]>([]);
 
+  // Hydrate outcomes if we already have lesson selections
+  useEffect(() => {
+    if (selectedSubject && selectedGrade) {
+      const fetchInitialData = async () => {
+        const lessonData = await apiService.getLessons(selectedSubject, selectedGrade);
+        setLessons(lessonData);
+        
+        if (lessonData.length > 0) {
+          const loData = await apiService.getLearningOutcomes(lessonData.map(l => l.id));
+          setLearningOutcomes(loData);
+        }
+      }
+      fetchInitialData();
+    }
+  }, []);
+
+  // Handle dropdown changes
   useEffect(() => {
     if (selectedSubject && selectedGrade) {
       const fetchLessons = async () => {
         const data = await apiService.getLessons(selectedSubject, selectedGrade);
         setLessons(data);
-        setSelectedLessonIds([]);
-        setExpandedLessonIds([]);
+        
+        // If the subject/grade changed and it's not the initial load, reset selections
+        if (selectedSubject !== initialFilters.subject || selectedGrade !== initialFilters.grade) {
+          setSelectedLessonIds([]);
+          setSelectedLoIds([]);
+          setExpandedLessonIds([]);
+        }
       }
       fetchLessons();
     } else {
@@ -63,7 +91,6 @@ const SelectionPanel: React.FC<Props> = ({ onScopeChange }) => {
       fetchLOs();
     } else {
       setLearningOutcomes([]);
-      setSelectedLoIds([]);
     }
   }, [lessons]);
 
@@ -132,7 +159,6 @@ const SelectionPanel: React.FC<Props> = ({ onScopeChange }) => {
       lessonIds: selectedLessonIds, 
       loIds: selectedLoIds 
     });
-    // Auto-close accordion upon sync
     setIsExpanded(false);
   };
 
@@ -150,7 +176,6 @@ const SelectionPanel: React.FC<Props> = ({ onScopeChange }) => {
 
   return (
     <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-xl border-4 border-slate-400 overflow-hidden flex flex-col relative transition-all duration-300">
-      {/* Accordion Toggle Header */}
       <div 
         onClick={() => setIsExpanded(!isExpanded)}
         className="bg-slate-100 px-5 md:px-8 py-4 md:py-5 border-b-2 border-slate-300 flex items-center justify-between cursor-pointer hover:bg-slate-200 transition-colors z-20"
@@ -173,10 +198,8 @@ const SelectionPanel: React.FC<Props> = ({ onScopeChange }) => {
         </div>
       </div>
       
-      {/* Collapsible Content - Dynamic Height (h-auto when expanded) */}
       <div className={`transition-all duration-500 ease-in-out overflow-hidden ${isExpanded ? 'opacity-100 h-auto visible' : 'max-h-0 opacity-0 invisible'}`}>
         <div className="p-5 md:p-8 bg-[#fdfdfd] space-y-6">
-          {/* Compact Selectors Row */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 items-end">
             <div className="space-y-1.5">
               <label className="text-[9px] font-black text-slate-600 uppercase tracking-widest ml-1 flex items-center gap-2">
@@ -218,7 +241,6 @@ const SelectionPanel: React.FC<Props> = ({ onScopeChange }) => {
             <div className="hidden lg:block h-[38px]"></div> 
           </div>
 
-          {/* Curriculum Area - Inline Flow */}
           <div className="space-y-4">
             {lessons.length > 0 ? (
               <div className="space-y-4">
@@ -270,7 +292,6 @@ const SelectionPanel: React.FC<Props> = ({ onScopeChange }) => {
                             </span>
                           )}
 
-                          {/* Inline Learning Outcomes List */}
                           {isExpandedLesson && (
                             <div className="mt-3 space-y-1.5 border-t border-indigo-200 pt-3 animate-in fade-in slide-in-from-top-1 duration-200">
                               {lessonLOs.map(lo => {

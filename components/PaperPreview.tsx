@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { AppMode, Question, PaperMetadata, Section } from '../types';
+import { AppMode, Question, PaperMetadata, Section } from '../types.ts';
 
 interface Props {
   mode: AppMode;
@@ -11,7 +11,8 @@ interface Props {
 }
 
 const cleanText = (text: string) => {
-  return text.replace(/^\[item[-_ ]?\d+\]\s*/i, '').replace(/ \[Set \d+-\d+\]$/i, '').trim();
+  // Correctly escape literal brackets to avoid regex syntax errors
+  return text.replace(/^\[item[_\- ]?\d+\]\s*/i, '').replace(/\s*\[Set \d+\-\d+\]$/i, '').trim();
 };
 
 const PaperPreview: React.FC<Props> = ({ mode, metadata, sections, questions, selectedBankQuestionIds }) => {

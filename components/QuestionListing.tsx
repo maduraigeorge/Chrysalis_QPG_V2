@@ -1,5 +1,5 @@
 
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { 
   Image as ImageIcon, 
   CheckCircle, 
@@ -14,7 +14,7 @@ import {
   FileText, 
   LayoutDashboard,
   ChevronUp, 
-  FileSpreadsheet,
+  FileSpreadsheet, 
   Printer,
   ChevronRight,
   Key,
@@ -23,9 +23,9 @@ import {
   CheckSquare,
   MinusSquare
 } from 'lucide-react';
-import { Question, PaperMetadata } from '../types';
-import { exportBankToWord } from '../utils/DocxExporter';
-import { exportBankToRtf } from '../utils/RtfExporter';
+import { Question, PaperMetadata } from '../types.ts';
+import { exportBankToWord } from '../utils/DocxExporter.ts';
+import { exportBankToRtf } from '../utils/RtfExporter.ts';
 import saveAs from 'file-saver';
 
 interface Props {
@@ -39,11 +39,22 @@ interface Props {
 }
 
 const cleanText = (text: string) => {
-  return text.replace(/^\[item[-_ ]?\d+\]\s*/i, '').replace(/ \[Set \d+-\d+\]$/i, '').trim();
+  return text.replace(/^\[item[_\- ]?\d+\]\s*/i, '').replace(/\s*\[Set \d+\-\d+\]$/i, '').trim();
 };
 
 const QuestionListing: React.FC<Props> = ({ questions, loading, selectedIds, onToggle, onToggleAll, metadata, onDesignPaper }) => {
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
+  const exportMenuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
+        setIsExportMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const groupedQuestions = useMemo(() => {
     const groups: Record<number, Record<string, Question[]>> = {};
@@ -150,35 +161,38 @@ const QuestionListing: React.FC<Props> = ({ questions, loading, selectedIds, onT
 
   return (
     <div className="space-y-6 md:space-y-8 pb-40 relative">
-      {/* Sticky Header Bar combining Title and Controls */}
-      <div className="sticky top-[64px] md:top-[80px] z-50 bg-white/90 backdrop-blur-md px-4 md:px-8 py-4 md:py-6 rounded-2xl border-2 border-slate-500 shadow-[0_12px_40px_-10px_rgba(0,0,0,0.3)] flex items-center justify-between">
-        <div className="space-y-1">
-          <h1 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">Question Bank</h1>
-          <p className="hidden xs:flex text-slate-500 font-black text-[9px] md:text-[10px] uppercase tracking-[0.3em] items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
-            Curriculum Mapping Result
-          </p>
+      <div className="sticky top-[64px] md:top-[80px] z-50 bg-white/95 backdrop-blur-md px-4 md:px-8 py-2 md:py-3.5 rounded-2xl border-2 border-slate-500 shadow-[0_12px_40px_-10px_rgba(0,0,0,0.3)] flex items-center justify-between transition-all duration-300">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-700 shadow-sm border border-indigo-100 shrink-0">
+             <Database size={18} className="md:w-5 md:h-5" strokeWidth={3} />
+          </div>
+          <div className="space-y-0.5">
+            <h1 className="text-lg md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Question Bank</h1>
+            <p className="hidden xs:flex text-slate-500 font-black text-[7px] md:text-[8px] uppercase tracking-[0.2em] items-center gap-1.5">
+              <span className="w-1 h-1 bg-indigo-500 rounded-full"></span>
+              Inventory Results
+            </p>
+          </div>
         </div>
 
-        <div className="flex items-center gap-4 md:gap-6">
-          <div className="hidden sm:flex flex-col items-end">
-            <span className="text-[10px] md:text-xs font-black text-slate-900">{questions.length} Items Listed</span>
-            <span className="text-[7px] md:text-[8px] font-bold text-slate-600 uppercase tracking-widest">In Repository</span>
+        <div className="flex items-center gap-3 md:gap-5">
+          <div className="hidden sm:flex flex-col items-end mr-1">
+            <span className="text-[10px] md:text-xs font-black text-slate-900 leading-none">{questions.length} Items</span>
+            <span className="text-[7px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Sync Ready</span>
           </div>
           
           <button 
             onClick={handleBulkToggle}
-            className={`flex items-center gap-2 px-4 md:px-6 py-2 md:py-3 rounded-xl transition-all border-2 font-black text-[9px] md:text-[10px] uppercase tracking-widest active:scale-95 shadow-sm ${allSelected ? 'bg-indigo-700 text-white border-indigo-700' : someSelected ? 'bg-indigo-50 text-indigo-700 border-indigo-300' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-500'}`}
+            className={`flex items-center gap-2 px-3 md:px-5 py-1.5 md:py-2.5 rounded-xl transition-all border-2 font-black text-[9px] md:text-[10px] uppercase tracking-widest active:scale-95 shadow-sm ${allSelected ? 'bg-indigo-700 text-white border-indigo-700' : someSelected ? 'bg-indigo-50 text-indigo-700 border-indigo-300' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-500'}`}
           >
             {allSelected ? (
-              <CheckSquare size={16} strokeWidth={3} />
+              <CheckSquare size={14} strokeWidth={3} />
             ) : someSelected ? (
-              <MinusSquare size={16} strokeWidth={3} />
+              <MinusSquare size={14} strokeWidth={3} />
             ) : (
-              <Square size={16} strokeWidth={3} />
+              <Square size={14} strokeWidth={3} />
             )}
-            <span className="hidden sm:inline">{allSelected ? 'Deselect All' : 'Select All'}</span>
-            <span className="sm:hidden">All</span>
+            <span className="hidden xs:inline">{allSelected ? 'None' : 'Select All'}</span>
           </button>
         </div>
       </div>
@@ -266,7 +280,6 @@ const QuestionListing: React.FC<Props> = ({ questions, loading, selectedIds, onT
         ))}
       </div>
 
-      {/* Footer Workbench */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t-4 border-slate-500 py-3 md:py-3 z-[100] flex justify-center no-print shadow-[0_-15px_50px_rgba(0,0,0,0.3)] h-auto md:h-20 items-center">
          <div className="max-w-[1600px] w-full flex flex-col md:flex-row items-center justify-between gap-3 md:gap-6 px-4 md:px-12 h-full py-3 md:py-0">
             <div className="flex items-center gap-4 md:gap-6 shrink-0">
@@ -286,7 +299,7 @@ const QuestionListing: React.FC<Props> = ({ questions, loading, selectedIds, onT
 
             <div className="flex items-center gap-2 md:gap-3 shrink-0 w-full md:w-auto">
               {selectedIds.length > 0 && (
-                <div className="relative flex-1 md:flex-initial">
+                <div className="relative flex-1 md:flex-initial" ref={exportMenuRef}>
                   <button 
                     onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
                     className="w-full flex items-center justify-center gap-2.5 bg-white text-slate-900 px-4 md:px-6 py-2.5 md:py-3 rounded-xl font-black text-[9px] md:text-[10px] uppercase tracking-widest shadow-xl hover:bg-slate-50 transition-all border-2 md:border-4 border-slate-400 active:scale-95 whitespace-nowrap"

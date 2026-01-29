@@ -26,14 +26,14 @@ import {
   FileWarning,
   Loader2
 } from 'lucide-react';
-import { AppMode, Question, PaperMetadata, Section, UserRole } from './types';
-import SelectionPanel from './components/SelectionPanel';
-import QuestionListing from './components/QuestionListing';
-import QuestionPaperCreator from './components/QuestionPaperCreator';
-import PaperPreview from './components/PaperPreview';
-import AdminPanel from './components/AdminPanel';
-import { apiService } from './apiService';
-import { exportPaperToPdf } from './utils/PdfExporter';
+import { AppMode, Question, PaperMetadata, Section, UserRole } from './types.ts';
+import SelectionPanel from './components/SelectionPanel.tsx';
+import QuestionListing from './components/QuestionListing.tsx';
+import QuestionPaperCreator from './components/QuestionPaperCreator.tsx';
+import PaperPreview from './components/PaperPreview.tsx';
+import AdminPanel from './components/AdminPanel.tsx';
+import { apiService } from './apiService.ts';
+import { exportPaperToPdf } from './utils/PdfExporter.ts';
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<AppMode>(AppMode.BANK);
@@ -43,11 +43,21 @@ const App: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [dbInitializing, setDbInitializing] = useState(true);
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<number[]>([]);
-  const [lastFilters, setLastFilters] = useState<{ subject: string; grade: string; lessonIds: number[]; loIds: number[] } | null>(null);
   
-  const [selectionKey, setSelectionKey] = useState(0);
+  // Persistent selection state
+  const [selectionFilters, setSelectionFilters] = useState<{ 
+    subject: string; 
+    grade: string; 
+    lessonIds: number[]; 
+    loIds: number[] 
+  }>({
+    subject: '',
+    grade: '',
+    lessonIds: [],
+    loIds: []
+  });
+  
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState('');
@@ -79,26 +89,19 @@ const App: React.FC = () => {
   }, []);
 
   const isPaperAligned = useMemo(() => {
-    // 1. Check if all compulsory metadata values are filled
-    // Removed title and duration from mandatory checks
     const isMetadataComplete = 
       paperMetadata.subject.trim().length > 0 &&
       paperMetadata.grade.trim().length > 0 &&
       paperMetadata.totalMarks > 0;
 
     if (!isMetadataComplete) return false;
-
-    // 2. Check if there are sections defined
     if (sections.length === 0) return false;
 
-    // 3. Check if total section goals match the paper's maximum marks
     const totalAllocatedMarks = sections.reduce((sum, s) => sum + s.sectionMarks, 0);
     const goalsMatch = totalAllocatedMarks === paperMetadata.totalMarks;
 
     if (!goalsMatch) return false;
 
-    // 4. Strict check: Every section must be fully populated with questions 
-    // AND number of questions * marks per question must exactly equal the section's mark goal
     const allSectionsComplete = sections.every(s => 
       s.sectionMarks > 0 && 
       s.marksPerQuestion > 0 &&
@@ -110,8 +113,7 @@ const App: React.FC = () => {
 
   const handleScopeChange = async (filters: { subject: string; grade: string; lessonIds: number[]; loIds: number[] }) => {
     setLoading(true);
-    setLastFilters(filters);
-    setIsMobileSidebarOpen(false);
+    setSelectionFilters(filters);
     try {
       const data = await apiService.getQuestions(filters);
       setQuestions(data);
@@ -133,21 +135,15 @@ const App: React.FC = () => {
     }
   };
 
-  const resetTopicSelector = () => {
-    setSelectionKey(prev => prev + 1);
-    setQuestions([]);
-    setSelectedQuestionIds([]);
-  };
-
   const toggleQuestionSelection = (id: number) => {
     setSelectedQuestionIds(prev => 
-      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter(qid => qid !== id) : [...prev, id]
     );
   };
 
   const setBulkQuestionSelection = (ids: number[], select: boolean) => {
     if (select) {
-      setSelectedQuestionIds(prev => Array.from(new Set([...prev, ...ids])));
+      setSelectedQuestionIds(Array.from(new Set([...selectedQuestionIds, ...ids])));
     } else {
       setSelectedQuestionIds(prev => prev.filter(id => !ids.includes(id)));
     }
@@ -176,7 +172,6 @@ const App: React.FC = () => {
 
   const handleReturnToBank = () => {
     setMode(AppMode.BANK);
-    resetTopicSelector();
   };
 
   const handleDownloadPdf = async () => {
@@ -340,7 +335,10 @@ const App: React.FC = () => {
             {mode === AppMode.BANK ? (
               <div className="space-y-8 md:space-y-12">
                 <div className="w-full animate-in fade-in slide-in-from-top-4 duration-500">
-                  <SelectionPanel key={selectionKey} onScopeChange={handleScopeChange} />
+                  <SelectionPanel 
+                    initialFilters={selectionFilters}
+                    onScopeChange={handleScopeChange} 
+                  />
                 </div>
 
                 <div id="question-listing-top" className="relative py-4">
