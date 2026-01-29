@@ -40,10 +40,7 @@ const App: React.FC = () => {
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<number[]>([]);
   const [lastFilters, setLastFilters] = useState<{ subject: string; grade: string; lessonIds: number[]; loIds: number[] } | null>(null);
   
-  // Logic to reset selection panel when switching modes
   const [selectionKey, setSelectionKey] = useState(0);
-
-  // UI States
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
@@ -79,12 +76,23 @@ const App: React.FC = () => {
   const handleScopeChange = async (filters: { subject: string; grade: string; lessonIds: number[]; loIds: number[] }) => {
     setLoading(true);
     setLastFilters(filters);
-    setIsMobileSidebarOpen(false); // Auto-close sidebar on mobile after sync
+    setIsMobileSidebarOpen(false);
     try {
       const data = await apiService.getQuestions(filters);
       setQuestions(data);
-      setSelectedQuestionIds(data.map(q => q.id));
+      // Requirement: Let all questions be selected by default
+      setSelectedQuestionIds(data.map(q => q.id)); 
       setPaperMetadata(prev => ({ ...prev, subject: filters.subject, grade: filters.grade }));
+      
+      // Scroll to Question Bank after sync for better UX in the stacked layout
+      setTimeout(() => {
+        const target = document.getElementById('question-listing-top');
+        if (target) {
+          const navHeight = window.innerWidth >= 768 ? 80 : 64;
+          const targetPosition = target.getBoundingClientRect().top + window.pageYOffset - navHeight - 20;
+          window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+        }
+      }, 300);
     } catch (error) {
       console.error("Failed to fetch questions", error);
     } finally {
@@ -141,7 +149,7 @@ const App: React.FC = () => {
   if (dbInitializing) {
     return (
       <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-white font-black text-center relative overflow-hidden">
-        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-500/10 rounded-full blur-[160px] animate-pulse"></div>
+        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-50/10 rounded-full blur-[160px] animate-pulse"></div>
         <div className="flex flex-col items-center gap-8 relative z-10">
           <div className="w-24 h-24 bg-indigo-500 rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-indigo-500/20 rotate-12 animate-bounce">
             <Database size={48} className="text-white" />
@@ -243,76 +251,46 @@ const App: React.FC = () => {
         </div>
       </nav>
 
-      <main className="flex-1 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-4 md:py-8 no-print flex flex-col md:flex-row gap-4 md:gap-8 pb-32">
+      <main className="flex-1 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-4 md:py-8 no-print pb-32">
         {mode === AppMode.ADMIN ? (
           <div className="w-full"><AdminPanel /></div>
         ) : (
-          <div className="flex flex-col md:flex-row w-full gap-4 md:gap-8">
+          <div className="w-full">
             {isBankMode ? (
-              <>
-                {/* Mobile Sidebar Trigger */}
-                <div className="md:hidden flex justify-between items-center bg-white p-4 rounded-2xl border-2 border-slate-300 shadow-sm sticky top-[72px] z-40">
-                   <div className="flex flex-col">
-                      <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest leading-none">Curriculum Scope</span>
-                      <span className="text-[8px] font-bold text-indigo-600 uppercase mt-1">{paperMetadata.subject || 'Select Subject'}</span>
-                   </div>
-                   <button 
-                    onClick={() => setIsMobileSidebarOpen(true)}
-                    className="bg-indigo-600 text-white p-2.5 rounded-xl shadow-lg active:scale-95 transition-transform flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
-                   >
-                     <Filter size={16} /> Filter
-                   </button>
+              <div className="space-y-8 md:space-y-12">
+                <div className="w-full animate-in fade-in slide-in-from-top-4 duration-500">
+                  <SelectionPanel key={selectionKey} onScopeChange={handleScopeChange} />
                 </div>
 
-                {/* Sidebar - Desktop Sticky / Mobile Overlay */}
-                <aside className={`
-                  ${isMobileSidebarOpen ? 'fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm p-4' : 'hidden md:block'} 
-                  w-full md:w-[320px] shrink-0 sticky md:top-28 h-fit
-                `}>
-                  <div className={`relative h-full md:h-auto animate-in slide-in-from-left duration-300`}>
-                    {isMobileSidebarOpen && (
-                      <button 
-                        onClick={() => setIsMobileSidebarOpen(false)}
-                        className="absolute -top-3 -right-3 bg-white text-slate-900 p-2.5 rounded-full border-2 border-slate-300 shadow-xl z-[110] md:hidden active:scale-90"
-                      >
-                        <X size={20} strokeWidth={3} />
-                      </button>
-                    )}
-                    <SelectionPanel key={selectionKey} onScopeChange={handleScopeChange} />
+                <div id="question-listing-top" className="relative py-4">
+                  <div className="absolute inset-0 flex items-center" aria-hidden="true">
+                    <div className="w-full border-t-2 border-slate-200"></div>
                   </div>
-                </aside>
-
-                <section className="flex-1 min-w-0">
-                  <div className="space-y-6 md:space-y-8">
-                    <div className="hidden md:flex items-center justify-between px-1">
-                      <div className="space-y-1">
-                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Question Bank</h1>
-                        <p className="text-slate-500 font-black text-[10px] uppercase tracking-[0.3em] flex items-center gap-2">
-                          <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
-                          Curriculum Exploration
-                        </p>
-                      </div>
-                    </div>
-
-                    <QuestionListing 
-                      questions={questions} 
-                      loading={loading}
-                      selectedIds={selectedQuestionIds}
-                      onToggle={toggleQuestionSelection}
-                      onToggleAll={setBulkQuestionSelection}
-                      metadata={paperMetadata}
-                      onDesignPaper={() => setMode(AppMode.PAPER)}
-                    />
+                  <div className="relative flex justify-center">
+                    <span className="bg-[#f8fafc] px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">Inventory Stream</span>
                   </div>
+                </div>
+
+                <section className="min-w-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                  <QuestionListing 
+                    questions={questions} 
+                    loading={loading}
+                    selectedIds={selectedQuestionIds}
+                    onToggle={toggleQuestionSelection}
+                    onToggleAll={setBulkQuestionSelection}
+                    metadata={paperMetadata}
+                    onDesignPaper={() => setMode(AppMode.PAPER)}
+                  />
                 </section>
-              </>
+              </div>
             ) : (
               <section className="flex-1 max-w-[1100px] mx-auto w-full">
                 <div className="space-y-6 md:space-y-8">
-                  <div className="flex items-center justify-between px-1">
+                  {/* Sticky Paper Designer Header */}
+                  <div className="sticky top-[64px] md:top-[80px] z-50 bg-white/90 backdrop-blur-md px-4 md:px-8 py-4 md:py-6 rounded-2xl border-2 border-slate-500 shadow-[0_12px_40px_-10px_rgba(0,0,0,0.3)] flex items-center justify-between mb-8">
                     <div className="space-y-1">
                       <h1 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">Paper Designer</h1>
-                      <p className="hidden xs:flex text-slate-500 font-black text-[10px] uppercase tracking-[0.3em] items-center gap-2">
+                      <p className="hidden xs:flex text-slate-500 font-black text-[9px] md:text-[10px] uppercase tracking-[0.3em] items-center gap-2">
                         <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
                         Exam Structuring
                       </p>

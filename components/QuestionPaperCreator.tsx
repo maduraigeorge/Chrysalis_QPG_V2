@@ -3,26 +3,19 @@ import React, { useState, useMemo } from 'react';
 import { 
   Plus, 
   Trash2, 
-  ChevronRight, 
   ClipboardList, 
   Settings2,
   AlertCircle,
   CheckCircle2,
-  AlertTriangle,
-  Info,
   Image as ImageIcon,
   Building2,
   X,
   Edit2,
   Save,
   Clock,
-  Type,
   GripVertical,
-  Link as LinkIcon,
   Printer,
   Calculator,
-  Download,
-  Share2,
   FileDown,
   FileText,
   FileSpreadsheet,
@@ -31,7 +24,7 @@ import {
   Maximize2,
   Minimize2,
   Key,
-  Layers
+  Eye
 } from 'lucide-react';
 import { Question, PaperMetadata, Section } from '../types';
 import { apiService } from '../apiService';
@@ -149,21 +142,23 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
   const globalSelectedIds = useMemo(() => sections.reduce((acc, s) => [...acc, ...s.selectedQuestionIds], [] as number[]), [sections]);
   const totalAllocatedMarks = useMemo(() => sections.reduce((sum, s) => sum + s.sectionMarks, 0), [sections]);
   
-  // Compulsory validation
   const isMetadataValid = metadata.totalMarks > 0 && metadata.duration.trim().length > 0;
   const isAligned = totalAllocatedMarks === metadata.totalMarks && metadata.totalMarks >= 1 && isMetadataValid;
 
   const handleExportWord = () => {
+    if (!isAligned) return;
     exportPaperToWord(metadata, sections, questions);
     setIsExportMenuOpen(false);
   };
 
   const handleExportRtf = () => {
+    if (!isAligned) return;
     exportPaperToRtf(metadata, sections, questions);
     setIsExportMenuOpen(false);
   };
 
   const handleExportExcel = () => {
+    if (!isAligned) return;
     const headers = ['Section', 'ID', 'Marks', 'Type', 'Question', 'Answer Key'];
     const rows = sections.flatMap(s => 
       s.selectedQuestionIds.map(qid => {
@@ -182,7 +177,7 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
     
     const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    saveAs(blob, `Question_Paper_${metadata.subject}_Structure.csv`);
+    saveAs(blob, `Question_Paper_${metadata.subject}_${metadata.grade}_Structure.csv`);
     setIsExportMenuOpen(false);
   };
 
@@ -226,7 +221,7 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
         
         <div className="flex items-center gap-3 md:gap-4 border-b-2 border-slate-200 pb-4 md:pb-6 relative z-10">
            <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-indigo-700 flex items-center justify-center text-white shadow-xl border-2 border-indigo-500">
-             <ClipboardList size={20} className="md:w-6" />
+             <ClipboardList className="w-5 h-5 md:w-6 md:h-6" />
            </div>
            <div>
              <h2 className="text-lg md:text-xl font-black text-slate-900 tracking-tight leading-none">Paper Config</h2>
@@ -245,7 +240,7 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                  <img src={metadata.schoolLogo} className="w-full h-full object-contain p-4" />
                ) : (
                  <>
-                   <ImageIcon className="text-slate-400 group-hover:text-indigo-600 transition-colors" size={24} strokeWidth={3} />
+                   <ImageIcon className="text-slate-400 group-hover:text-indigo-600 transition-colors w-6 h-6 md:w-8 md:h-8" strokeWidth={3} />
                    <span className="text-[7px] md:text-[8px] font-black text-slate-500 uppercase tracking-widest text-center px-4 mt-2 leading-relaxed">Institutional Branding</span>
                  </>
                )}
@@ -268,14 +263,14 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
              <div className="space-y-1">
                 <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">School Name</label>
                 <div className="relative">
-                  <Building2 className="absolute left-3 md:left-3.5 top-1/2 -translate-y-1/2 text-slate-500 w-4" />
+                  <Building2 className="absolute left-3 md:left-3.5 top-1/2 -translate-y-1/2 text-slate-500 w-3.5 h-3.5 md:w-4 md:h-4" />
                   <input type="text" value={metadata.schoolName} onChange={e => onMetadataChange({...metadata, schoolName: e.target.value})} className="w-full bg-white border-2 border-slate-400 rounded-xl pl-9 md:pl-10 pr-4 py-2 md:py-2.5 text-[10px] md:text-xs font-bold text-slate-800 focus:border-indigo-600 transition-all shadow-sm" placeholder="Institution Name" />
                 </div>
              </div>
              <div className="space-y-1">
                 <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Time Limit (Compulsory) *</label>
                 <div className="relative">
-                  <Clock className={`absolute left-3 md:left-3.5 top-1/2 -translate-y-1/2 w-4 ${!metadata.duration ? 'text-rose-500' : 'text-slate-500'}`} />
+                  <Clock className={`absolute left-3 md:left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 md:w-4 md:h-4 ${!metadata.duration ? 'text-rose-500' : 'text-slate-500'}`} />
                   <input 
                     type="text" 
                     value={metadata.duration} 
@@ -288,7 +283,7 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
              <div className="space-y-1">
                 <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Max Marks (Compulsory) *</label>
                 <div className="relative">
-                  <Calculator className={`absolute left-3 md:left-3.5 top-1/2 -translate-y-1/2 w-4 ${metadata.totalMarks <= 0 ? 'text-rose-500' : 'text-slate-500'}`} />
+                  <Calculator className={`absolute left-3 md:left-3.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 md:w-4 md:h-4 ${metadata.totalMarks <= 0 ? 'text-rose-500' : 'text-slate-500'}`} />
                   <input 
                     type="number" 
                     min="1" 
@@ -310,14 +305,16 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
       <div className="space-y-4 md:space-y-6">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between px-1 gap-4">
           <div className="flex items-center gap-3">
-             <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white border-2 border-slate-700 shadow-xl"><Settings2 size={18} /></div>
+             <div className="w-9 h-9 md:w-10 md:h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white border-2 border-slate-700 shadow-xl">
+               <Settings2 className="w-4 h-4 md:w-5 md:h-5" />
+             </div>
              <div>
                <h3 className="text-base md:text-lg font-black text-slate-900 tracking-tight leading-none">Paper Sections</h3>
                <p className="text-[7px] md:text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">Structure Assessment Hierarchy</p>
              </div>
           </div>
           <button onClick={addSection} className="w-full md:w-auto bg-white border-2 md:border-4 border-indigo-700 text-indigo-700 px-4 md:px-5 py-2 md:py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest hover:bg-indigo-700 hover:text-white transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2">
-            <Plus size={14} strokeWidth={4} /> Add Section
+            <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" strokeWidth={4} /> Add Section
           </button>
         </div>
 
@@ -360,10 +357,12 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                     </div>
                   </div>
                   <div className="flex items-center gap-2 md:gap-4">
-                     {!isFull && <div className="hidden xs:flex items-center gap-1 md:gap-1.5 bg-amber-50 text-amber-900 px-2 md:px-3 py-1 rounded-full text-[7px] md:text-[8px] font-black uppercase tracking-widest border-2 border-amber-300 shadow-sm"><AlertCircle size={12} /> {needed - section.selectedQuestionIds.length} Missing</div>}
-                     <button onClick={e => { e.stopPropagation(); removeSection(section.id); }} className="text-slate-500 hover:text-rose-700 transition-colors p-1.5 md:p-2 hover:bg-rose-50 rounded-xl"><Trash2 size={18} /></button>
-                     <div className="p-1.5 md:p-2 text-slate-500 bg-slate-100 rounded-xl group-hover:text-indigo-700 transition-all border border-slate-200">
-                        {isActive ? <Minimize2 className="w-4 h-4" /> : <Maximize2 className="w-4 h-4" />}
+                     {!isFull && <div className="hidden xs:flex items-center gap-1 md:gap-1.5 bg-amber-50 text-amber-900 px-2 md:px-3 py-1 rounded-full text-[7px] md:text-[8px] font-black uppercase tracking-widest border-2 border-amber-300 shadow-sm"><AlertCircle className="w-3 h-3 md:w-3.5 md:h-3.5" /> {needed - section.selectedQuestionIds.length} Missing</div>}
+                     <button onClick={e => { e.stopPropagation(); removeSection(section.id); }} className="text-slate-500 hover:text-rose-700 transition-colors p-1.5 md:p-2 hover:bg-rose-50 rounded-xl">
+                       <Trash2 className="w-4 h-4 md:w-5 md:h-5" />
+                     </button>
+                     <div className="p-1.5 md:p-2 text-slate-500 bg-slate-50 rounded-xl group-hover:text-indigo-700 transition-all border border-slate-200">
+                        {isActive ? <Minimize2 className="w-3.5 h-3.5 md:w-4 md:h-4" /> : <Maximize2 className="w-3.5 h-3.5 md:w-4 md:h-4" />}
                      </div>
                   </div>
                 </div>
@@ -437,7 +436,15 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                                   {sel && <CheckCircle2 size={12} strokeWidth={3} />}
                                 </div>
                                 <div className="flex-1 flex flex-col gap-1 md:gap-1.5">
-                                   <p className={`text-[10px] md:text-[11px] font-bold leading-tight ${sel ? 'text-indigo-950' : 'text-slate-900'}`}>{cleanText(q.question_text)}</p>
+                                   <div className="flex flex-col md:flex-row gap-3 md:items-start">
+                                      {/* Requirement: Show question image preview while working with QP */}
+                                      {q.image_url && (
+                                        <div className="shrink-0 w-16 h-16 md:w-20 md:h-20 rounded-lg overflow-hidden border-2 border-slate-200 bg-slate-50 shadow-inner group-hover:scale-105 transition-transform">
+                                           <img src={q.image_url} alt="Item Preview" className="w-full h-full object-cover" />
+                                        </div>
+                                      )}
+                                      <p className={`text-[10px] md:text-[11px] font-bold leading-tight ${sel ? 'text-indigo-950' : 'text-slate-900'}`}>{cleanText(q.question_text)}</p>
+                                   </div>
                                    <div className="flex gap-1.5 md:gap-2">
                                       {q.answer_key && <span className="bg-emerald-50 px-1.5 md:px-2 py-0.5 rounded text-[7px] md:text-[8px] font-black text-emerald-900 border border-emerald-300 shadow-sm">Key: {q.answer_key.substring(0,30)}...</span>}
                                       <span className="bg-indigo-50 px-1.5 md:px-2 py-0.5 rounded text-[7px] md:text-[8px] font-black text-indigo-900 border border-indigo-300 shadow-sm truncate max-w-[80px] sm:max-w-none">{q.lesson_title}</span>
@@ -448,7 +455,7 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                                 onClick={(e) => { e.stopPropagation(); openQuestionModal(section, q); }} 
                                 className="absolute right-2 md:right-3 top-2 md:top-3 p-1 md:p-1.5 bg-white rounded-lg shadow-xl border-2 border-slate-400 text-slate-600 hover:text-indigo-700 opacity-0 group-hover:opacity-100 transition-all z-20 hover:scale-110"
                               >
-                                <Edit2 size={12} strokeWidth={3} />
+                                <Edit2 className="w-3.5 h-3.5 md:w-4 md:h-4" strokeWidth={3} />
                               </button>
                             </div>
                           );
@@ -478,7 +485,7 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
             <div className="flex items-center gap-4 md:gap-6 shrink-0 w-full md:w-auto">
                <div className="flex flex-col gap-1 w-full">
                   <div className="flex justify-between items-end">
-                    <span className="text-[8px] md:text-[10px] font-black text-slate-800 uppercase tracking-widest">Weight Audit</span>
+                    <span className="text-[8px] md:text-[10px] font-black text-slate-800 uppercase tracking-widest">Weight Distribution Audit</span>
                     <span className={`text-[10px] md:text-xs font-black tabular-nums border-2 px-1.5 md:px-2 py-0.5 rounded-lg shadow-md ${isAligned ? 'text-emerald-900 bg-emerald-100 border-emerald-500' : 'text-indigo-900 bg-indigo-100 border-indigo-500'}`}>
                        {totalAllocatedMarks} <span className="text-slate-500 font-bold mx-0.5">/</span> {metadata.totalMarks} <span className="hidden xs:inline text-[7px] md:text-[8px] uppercase tracking-tighter opacity-70">Marks</span>
                     </span>
@@ -495,46 +502,74 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
             </div>
 
             <div className="flex items-center gap-2 md:gap-4 shrink-0 w-full md:w-auto">
-              <div className="relative flex-1 md:flex-initial">
-                <button 
-                  onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-                  className="w-full flex items-center justify-center gap-2 bg-white text-slate-950 px-4 md:px-6 py-2.5 md:py-3 rounded-xl font-black text-[9px] md:text-[10px] uppercase tracking-widest shadow-2xl hover:bg-slate-50 transition-all border-2 md:border-4 border-slate-400 active:scale-95 whitespace-nowrap"
-                >
-                  <FileDown size={14} className="text-indigo-700" strokeWidth={4} />
-                  Export <span className="hidden sm:inline">Paper</span>
-                  <ChevronDown size={10} className={`transition-transform duration-300 ${isExportMenuOpen ? 'rotate-180' : ''}`} strokeWidth={4} />
-                </button>
+              {isAligned ? (
+                <>
+                  <div className="relative flex-1 md:flex-initial">
+                    <button 
+                      onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
+                      className="w-full flex items-center justify-center gap-2 bg-white text-slate-950 px-4 md:px-6 py-2.5 md:py-3 rounded-xl font-black text-[9px] md:text-[10px] uppercase tracking-widest shadow-2xl hover:bg-slate-50 transition-all border-2 md:border-4 border-slate-400 active:scale-95 whitespace-nowrap"
+                    >
+                      <FileDown className="w-3.5 h-3.5 md:w-4 md:h-4 text-indigo-700" strokeWidth={4} />
+                      Export Paper
+                      <ChevronDown className={`w-2.5 h-2.5 md:w-3 md:h-3 transition-transform duration-300 ${isExportMenuOpen ? 'rotate-180' : ''}`} strokeWidth={4} />
+                    </button>
 
-                {isExportMenuOpen && (
-                  <div className="absolute bottom-full right-0 mb-3 w-56 md:w-64 bg-white rounded-2xl shadow-[0_20px_80px_rgba(0,0,0,0.5)] border-4 border-slate-500 p-2 animate-in fade-in slide-in-from-bottom-4 duration-300 z-[110]">
-                    <div className="px-4 py-2 border-b-2 border-slate-100 mb-2">
-                      <span className="text-[8px] md:text-[9px] font-black text-slate-600 uppercase tracking-widest">Document Center</span>
-                    </div>
-                    <button onClick={handleExportWord} className="w-full flex items-center gap-4 px-4 py-3.5 hover:bg-indigo-50 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-900 transition-all group">
-                      <div className="w-7 h-7 md:w-8 md:h-8 bg-blue-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform border-2 border-blue-200 shadow-sm"><FileText size={16} className="text-blue-700" /></div> Word (.docx)
-                    </button>
-                    <button onClick={handleExportRtf} className="w-full flex items-center gap-4 px-4 py-3.5 hover:bg-slate-50 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-900 transition-all group">
-                      <div className="w-7 h-7 md:w-8 md:h-8 bg-slate-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform border-2 border-slate-300 shadow-sm"><FileText size={16} className="text-slate-600" /></div> RTF (.rtf)
-                    </button>
-                    <button onClick={handleExportExcel} className="w-full flex items-center gap-4 px-4 py-3.5 hover:bg-emerald-50 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-900 transition-all group">
-                      <div className="w-7 h-7 md:w-8 md:h-8 bg-emerald-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform border-2 border-emerald-700 text-emerald-700"><FileSpreadsheet size={16} /></div> Excel (.csv)
-                    </button>
-                    <div className="h-[2px] bg-slate-200 my-2 mx-2"></div>
-                    <button onClick={() => { window.print(); setIsExportMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-900 hover:text-white rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-900 transition-all group">
-                      <div className="w-7 h-7 md:w-8 md:h-8 bg-slate-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform border-2 border-slate-300 group-hover:text-white"><Printer size={16} /></div> Physical Print
-                    </button>
+                    {isExportMenuOpen && (
+                      <div className="absolute bottom-full right-0 mb-3 w-56 md:w-64 bg-white rounded-2xl shadow-[0_20px_80px_rgba(0,0,0,0.5)] border-4 border-slate-500 p-2 animate-in fade-in slide-in-from-bottom-4 duration-300 z-[110]">
+                        <div className="px-4 py-2 border-b-2 border-slate-200 mb-2">
+                          <span className="text-[8px] md:text-[9px] font-black text-slate-600 uppercase tracking-widest">Production Suite</span>
+                        </div>
+                        <button onClick={handleExportWord} className="w-full flex items-center gap-4 px-4 py-3.5 hover:bg-indigo-50 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-900 transition-all group text-left">
+                          <div className="w-7 h-7 md:w-8 md:h-8 bg-blue-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform border-2 border-blue-200 shadow-sm">
+                            <FileText className="w-4 h-4 text-blue-700" />
+                          </div> 
+                          Microsoft Word (.docx)
+                        </button>
+                        <button onClick={handleExportRtf} className="w-full flex items-center gap-4 px-4 py-3.5 hover:bg-slate-50 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-900 transition-all group text-left">
+                          <div className="w-7 h-7 md:w-8 md:h-8 bg-slate-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform border-2 border-blue-200 shadow-sm">
+                            <FileText className="w-4 h-4 text-slate-600" />
+                          </div> 
+                          Rich Text Format (.rtf)
+                        </button>
+                        <button onClick={handleExportExcel} className="w-full flex items-center gap-4 px-4 py-3.5 hover:bg-emerald-50 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-900 transition-all group text-left">
+                          <div className="w-7 h-7 md:w-8 md:h-8 bg-emerald-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform border-2 border-emerald-700 shadow-sm">
+                            <FileSpreadsheet className="w-4 h-4 text-emerald-700" />
+                          </div> 
+                          Data Spreadsheet (.csv)
+                        </button>
+                        <div className="h-[2px] bg-slate-200 my-2 mx-2"></div>
+                        <button onClick={() => { window.print(); setIsExportMenuOpen(false); }} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-900 hover:text-white rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-900 transition-all group text-left">
+                          <div className="w-7 h-7 md:w-8 md:h-8 bg-slate-100 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform border-2 border-slate-300 group-hover:text-white shadow-sm">
+                            <Printer className="w-4 h-4" />
+                          </div> 
+                          Print / Export to PDF
+                        </button>
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              <button 
-                onClick={handleAutogradeSubmit}
-                disabled={!isAligned}
-                className={`flex-1 md:flex-initial h-11 md:h-14 px-4 md:px-10 rounded-xl md:rounded-[1.25rem] font-black text-[9px] md:text-[11px] uppercase tracking-[0.1em] md:tracking-[0.2em] shadow-[0_15px_50px_rgba(79,70,229,0.4)] transition-all flex items-center justify-center gap-2 md:gap-3 whitespace-nowrap shrink-0 border-2 md:border-4 ${!isAligned ? 'bg-slate-400 text-slate-700 grayscale cursor-not-allowed border-slate-500 shadow-none' : 'bg-gradient-to-r from-indigo-700 to-indigo-900 text-white border-indigo-500 hover:brightness-110 active:scale-95'}`}
-              >
-                <Sparkles size={16} className={`text-white fill-white/20 ${isAligned ? 'animate-pulse' : ''}`} strokeWidth={3} /> 
-                <span className="hidden sm:inline">Push to </span>Autograde
-              </button>
+                  <button 
+                    onClick={handleAutogradeSubmit}
+                    className="flex-1 md:flex-initial h-11 md:h-14 px-4 md:px-10 rounded-xl md:rounded-[1.25rem] font-black text-[9px] md:text-[11px] uppercase tracking-[0.1em] md:tracking-[0.2em] shadow-[0_15px_50px_rgba(79,70,229,0.4)] transition-all flex items-center justify-center gap-2 md:gap-3 whitespace-nowrap shrink-0 border-2 md:border-4 bg-gradient-to-r from-indigo-700 to-indigo-900 text-white border-indigo-500 hover:brightness-110 active:scale-95"
+                  >
+                    <Sparkles className="w-4 h-4 md:w-[18px] md:h-[18px] text-white fill-white/20 animate-pulse" strokeWidth={3} /> 
+                    <span className="hidden sm:inline">Push to </span>Autograde
+                  </button>
+                </>
+              ) : (
+                <>
+                  <button 
+                    onClick={() => window.print()}
+                    className="flex-1 md:flex-initial h-11 md:h-14 px-6 md:px-10 rounded-xl md:rounded-[1.25rem] font-black text-[9px] md:text-[10px] uppercase tracking-widest transition-all flex items-center justify-center gap-2 md:gap-3 whitespace-nowrap border-2 md:border-4 border-slate-300 bg-white text-slate-500 hover:bg-slate-50 active:scale-95 shadow-sm"
+                  >
+                    <Eye className="w-4 h-4 md:w-5 md:h-5" />
+                    Preview Draft
+                  </button>
+                  <div className="hidden lg:flex items-center gap-2 px-6 py-3 bg-amber-50 border-2 border-amber-200 rounded-xl text-amber-800 text-[8px] font-black uppercase tracking-widest animate-pulse">
+                    <AlertCircle size={14} /> Align marks to unlock exports
+                  </div>
+                </>
+              )}
             </div>
          </div>
       </div>
@@ -572,16 +607,35 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                    <textarea autoFocus rows={3} value={editingQuestion.question_text} onChange={e => setEditingQuestion({...editingQuestion, question_text: e.target.value})} className="w-full bg-slate-100 border-2 border-slate-400 rounded-xl md:rounded-2xl px-4 md:px-6 py-3 md:py-4 text-xs md:text-sm font-bold text-slate-900 focus:border-indigo-600 focus:bg-white transition-all shadow-inner resize-none"></textarea>
                 </div>
                 <div className="space-y-1.5">
+                  <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Illustration URL (Optional)</label>
+                  <div className="flex gap-4">
+                    <div className="flex-1 relative">
+                      <input 
+                        type="text" 
+                        value={editingQuestion.image_url || ''} 
+                        onChange={e => setEditingQuestion({...editingQuestion, image_url: e.target.value})} 
+                        className="w-full bg-white border-2 border-slate-400 rounded-xl px-4 py-3 text-xs md:text-sm font-bold text-indigo-900 focus:border-indigo-600 shadow-sm" 
+                        placeholder="https://images.unsplash.com/..." 
+                      />
+                    </div>
+                    {editingQuestion.image_url && (
+                       <div className="w-16 h-16 md:w-20 md:h-20 rounded-xl border-2 border-slate-200 overflow-hidden shrink-0 bg-slate-50 shadow-sm">
+                          <img src={editingQuestion.image_url} alt="Live Preview" className="w-full h-full object-cover" />
+                       </div>
+                    )}
+                  </div>
+                </div>
+                <div className="space-y-1.5">
                   <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Solution Key</label>
                   <div className="relative">
-                    <Key className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-slate-500 w-4" strokeWidth={3} />
+                    <Key className="absolute left-3 md:left-4 top-1/2 -translate-y-1/2 text-slate-500 w-4 h-4" strokeWidth={3} />
                     <input type="text" value={editingQuestion.answer_key || ''} onChange={e => setEditingQuestion({...editingQuestion, answer_key: e.target.value})} className="w-full bg-white border-2 border-slate-400 rounded-xl pl-9 md:pl-12 pr-4 md:pr-5 py-2.5 md:py-3.5 text-xs md:text-sm font-bold text-slate-900 focus:border-indigo-600 shadow-sm" placeholder="Validation response..." />
                   </div>
                 </div>
                 <div className="flex gap-3 md:gap-4 pt-4 md:pt-6">
                    <button onClick={() => setIsModalOpen(false)} className="flex-1 py-3 md:py-4 text-[8px] md:text-[10px] font-black text-slate-600 uppercase tracking-[0.2em] border-2 border-slate-300 rounded-xl md:rounded-2xl hover:bg-slate-50 transition-all">Discard</button>
                    <button onClick={handleSaveQuestion} className="flex-[2] bg-indigo-700 text-white py-3 md:py-4 rounded-xl md:rounded-2xl font-black text-[10px] md:text-xs uppercase tracking-[0.2em] shadow-[0_10px_40px_rgba(79,70,229,0.5)] border-2 border-indigo-500 hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2 md:gap-3 px-4 md:px-8">
-                     <Save size={20} strokeWidth={3} /> Commit Entry
+                     <Save className="w-4 h-4 md:w-5 md:h-5" strokeWidth={3} /> Commit Entry
                    </button>
                 </div>
              </div>
