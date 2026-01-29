@@ -20,9 +20,10 @@ export const exportPaperToPdf = async (metadata: PaperMetadata) => {
   
   // Style the clone for the PDF engine
   clone.style.width = '210mm'; // Standard A4 width
-  clone.style.padding = '10mm';
+  clone.style.padding = '0';
+  clone.style.margin = '0';
   clone.style.backgroundColor = 'white';
-  clone.style.color = '#0f172a'; // Slate-900
+  clone.style.color = '#000000';
   
   // Create a hidden temporary container
   const tempWrapper = document.createElement('div');
@@ -53,10 +54,17 @@ export const exportPaperToPdf = async (metadata: PaperMetadata) => {
   };
 
   try {
-    await html2pdf().from(clone).set(options).save();
-  } catch (error) {
+    // Some ESM loaders/shims wrap the function in a default property
+    const html2pdfFunc = (html2pdf as any).default || html2pdf;
+    
+    if (typeof html2pdfFunc !== 'function') {
+      throw new Error("html2pdf is not resolved as a function. Check import map or library version.");
+    }
+
+    await html2pdfFunc().from(clone).set(options).save();
+  } catch (error: any) {
     console.error("PDF Generation error:", error);
-    alert("There was an issue generating your PDF. Please try the standard Print option.");
+    alert(`There was an issue generating your PDF: ${error.message || 'Unknown error'}`);
   } finally {
     document.body.removeChild(tempWrapper);
   }
