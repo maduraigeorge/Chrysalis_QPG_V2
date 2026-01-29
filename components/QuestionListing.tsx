@@ -167,7 +167,7 @@ const QuestionListing: React.FC<Props> = ({ questions, loading, selectedIds, onT
              <Database size={18} className="md:w-5 md:h-5" strokeWidth={3} />
           </div>
           <div className="space-y-0.5">
-            <h1 className="text-lg md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Question Bank</h1>
+            <h1 className="text-lg md:text-xl font-black text-slate-900 tracking-tight leading-tight">Question Bank</h1>
             <p className="hidden xs:flex text-slate-500 font-black text-[7px] md:text-[8px] uppercase tracking-[0.2em] items-center gap-1.5">
               <span className="w-1 h-1 bg-indigo-500 rounded-full"></span>
               Inventory Results

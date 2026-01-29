@@ -262,13 +262,13 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
 
   return (
     <div className="space-y-6 md:space-y-8 pb-32 md:pb-24 relative">
-      <div className="sticky top-[64px] md:top-[80px] z-50 bg-white/95 backdrop-blur-md px-4 md:px-8 py-2 md:py-3.5 rounded-2xl border-2 border-slate-500 shadow-[0_12px_40px_-10px_rgba(0,0,0,0.3)] flex items-center justify-between mb-8 transition-all duration-300">
+      <div className="sticky top-[64px] md:top-[80px] z-50 bg-white/95 backdrop-blur-md px-4 md:px-8 py-2 md:py-3.5 rounded-2xl border-2 border-slate-500 shadow-[0_12px_40px_-10px_rgba(0,0,0,0.3)] flex items-center justify-between mb-6 transition-all duration-300">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-700 rounded-xl flex items-center justify-center text-white shadow-md border border-indigo-500 shrink-0">
              <LayoutDashboard size={18} className="md:w-5 md:h-5" strokeWidth={3} />
           </div>
           <div className="space-y-0.5">
-            <h1 className="text-lg md:text-2xl font-black text-slate-900 tracking-tight leading-tight">Paper Designer</h1>
+            <h1 className="text-lg md:text-xl font-black text-slate-900 tracking-tight leading-tight">Paper Designer</h1>
             <p className="hidden xs:flex text-slate-500 font-black text-[7px] md:text-[8px] uppercase tracking-[0.2em] items-center gap-1.5">
               <span className="w-1 h-1 bg-indigo-500 rounded-full"></span>
               Structure Exam Layout
@@ -305,7 +305,7 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
              <label className="text-[8px] md:text-[9px] font-black text-indigo-700 uppercase tracking-widest ml-1">Institutional Seal</label>
              <div className="w-full aspect-video md:aspect-square bg-slate-50 border-4 border-dashed border-slate-300 rounded-xl md:rounded-2xl flex flex-col items-center justify-center group hover:bg-white hover:border-indigo-600 transition-all cursor-pointer overflow-hidden relative shadow-inner">
                {metadata.schoolLogo ? (
-                 <img src={metadata.schoolLogo} className="w-full h-full object-contain p-4" />
+                 <img src={metadata.schoolLogo} alt="School Logo" className="w-full h-full object-contain p-4" />
                ) : (
                  <>
                    <ImageIcon className="text-slate-400 group-hover:text-indigo-600 transition-colors w-6 h-6 md:w-8 md:h-8" strokeWidth={3} />
@@ -555,7 +555,7 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-4 border-slate-500 py-3 md:py-3 z-[100] flex justify-center no-print shadow-[0_-15px_60px_rgba(0,0,0,0.4)] h-auto md:h-20 items-center">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-4 border-slate-500 py-3 md:py-3 z-[100] flex justify-center no-print shadow-[0_-15px_50px_rgba(0,0,0,0.4)] h-auto md:h-20 items-center">
          <div className="max-w-[1600px] w-full flex flex-col md:flex-row items-center justify-between gap-3 md:gap-8 px-4 md:px-12 h-full py-3 md:py-0">
             <div className="flex items-center gap-4 md:gap-6 shrink-0 w-full md:w-auto">
                <div className="flex flex-col gap-1 w-full">
