@@ -18,9 +18,11 @@ export const exportPaperToPdf = async (metadata: PaperMetadata) => {
   // Clone to avoid style conflicts during rendering
   const clone = content.cloneNode(true) as HTMLElement;
   
-  // Style the clone for the PDF engine
-  clone.style.width = '210mm'; // Standard A4 width
-  clone.style.padding = '0';
+  // Requirement: Re-apply paper styling specifically for the PDF engine
+  // This ensures the exported file looks professional even if the portal preview is responsive.
+  clone.style.width = '210mm'; 
+  clone.style.minHeight = '297mm';
+  clone.style.padding = '15mm'; // Adding professional padding for print
   clone.style.margin = '0';
   clone.style.backgroundColor = 'white';
   clone.style.color = '#000000';
@@ -33,10 +35,11 @@ export const exportPaperToPdf = async (metadata: PaperMetadata) => {
   tempWrapper.appendChild(clone);
   document.body.appendChild(tempWrapper);
 
-  const filename = `${metadata.title || 'Question_Paper'}_${metadata.subject}_${metadata.grade}.pdf`.replace(/\s+/g, '_');
+  const displayTitle = metadata.title.trim() || "Exam";
+  const filename = `${displayTitle}_${metadata.subject}_${metadata.grade}.pdf`.replace(/\s+/g, '_');
 
   const options = {
-    margin: [10, 10, 10, 10],
+    margin: 0, // Margin is handled by clone.style.padding for precision
     filename: filename,
     image: { type: 'jpeg', quality: 0.98 },
     html2canvas: { 
@@ -54,7 +57,7 @@ export const exportPaperToPdf = async (metadata: PaperMetadata) => {
   };
 
   try {
-    // Some ESM loaders/shims wrap the function in a default property
+    // Fix: Correctly resolve the html2pdf function from the ESM import
     const html2pdfFunc = (html2pdf as any).default || html2pdf;
     
     if (typeof html2pdfFunc !== 'function') {
