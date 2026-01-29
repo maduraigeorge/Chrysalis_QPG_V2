@@ -37,7 +37,7 @@ export const exportBankToWord = async (questions: Question[], metadata: PaperMet
       text: metadata.schoolName,
       heading: HeadingLevel.HEADING_1,
       alignment: AlignmentType.CENTER,
-      spacing: { after: 100 }
+      spacing: { after: 50 }
     }));
   }
 
@@ -45,7 +45,7 @@ export const exportBankToWord = async (questions: Question[], metadata: PaperMet
     text: 'Question Repository',
     heading: HeadingLevel.HEADING_2,
     alignment: AlignmentType.CENTER,
-    spacing: { after: 200 }
+    spacing: { after: 100 }
   }));
 
   children.push(new Paragraph({
@@ -53,7 +53,7 @@ export const exportBankToWord = async (questions: Question[], metadata: PaperMet
       new TextRun({ text: `Subject: ${metadata.subject}    |    Grade: ${metadata.grade}`, bold: true })
     ],
     alignment: AlignmentType.CENTER,
-    spacing: { after: 300 }
+    spacing: { after: 200 }
   }));
 
   for (const [lessonTitle, loGroups] of Object.entries(groupedByLesson)) {
@@ -61,8 +61,8 @@ export const exportBankToWord = async (questions: Question[], metadata: PaperMet
       new Paragraph({
         text: lessonTitle.toUpperCase(),
         heading: HeadingLevel.HEADING_3,
-        spacing: { before: 200, after: 100 },
-        border: { bottom: { color: '000000', space: 1, style: BorderStyle.SINGLE, size: 6 } }
+        spacing: { before: 150, after: 50 },
+        border: { bottom: { color: '000000', space: 1, style: BorderStyle.SINGLE, size: 4 } }
       })
     );
 
@@ -70,9 +70,9 @@ export const exportBankToWord = async (questions: Question[], metadata: PaperMet
       children.push(
         new Paragraph({
           children: [
-            new TextRun({ text: `Outcome: ${loDescription}`, bold: true, italics: true, color: '444444', size: 18 })
+            new TextRun({ text: `Outcome: ${loDescription}`, bold: true, italics: true, color: '666666', size: 16 })
           ],
-          spacing: { before: 100, after: 50 }
+          spacing: { before: 80, after: 40 }
         })
       );
 
@@ -80,11 +80,11 @@ export const exportBankToWord = async (questions: Question[], metadata: PaperMet
         children.push(
           new Paragraph({
             children: [
-              new TextRun({ text: `${i + 1}. `, bold: true }),
-              new TextRun({ text: cleanText(q.question_text) }),
-              new TextRun({ text: ` [${q.marks} Marks]`, bold: true, color: '666666' })
+              new TextRun({ text: `${i + 1}. `, bold: true, size: 18 }),
+              new TextRun({ text: cleanText(q.question_text), size: 18 }),
+              new TextRun({ text: ` [${q.marks}M]`, bold: true, color: '888888', size: 18 })
             ],
-            spacing: { before: 50, after: 50 }
+            spacing: { before: 40, after: 40 }
           })
         );
 
@@ -92,10 +92,10 @@ export const exportBankToWord = async (questions: Question[], metadata: PaperMet
           children.push(
             new Paragraph({
               children: [
-                new TextRun({ text: `Key: `, bold: true, color: '008000', size: 16 }),
-                new TextRun({ text: q.answer_key, color: '006400', size: 16 })
+                new TextRun({ text: `Key: `, bold: true, size: 16 }),
+                new TextRun({ text: q.answer_key, size: 16 })
               ],
-              spacing: { after: 50 }
+              spacing: { after: 40 }
             })
           );
         }
@@ -108,11 +108,11 @@ export const exportBankToWord = async (questions: Question[], metadata: PaperMet
                 children: [
                   new ImageRun({
                     data: imgData,
-                    transformation: { width: 300, height: 200 },
+                    transformation: { width: 280, height: 180 },
                   } as any),
                 ],
                 alignment: AlignmentType.CENTER,
-                spacing: { before: 100, after: 100 }
+                spacing: { before: 80, after: 80 }
               })
             );
           }
@@ -151,55 +151,51 @@ export const exportPaperToWord = async (metadata: PaperMetadata, sections: Secti
   const children: any[] = [];
   const displayTitle = metadata.title.trim() || "Exam";
 
-  // Institution Header (Hide if empty)
   if (metadata.schoolName) {
     children.push(new Paragraph({
       text: metadata.schoolName,
       heading: HeadingLevel.HEADING_1,
       alignment: AlignmentType.CENTER,
-      spacing: { after: 50 }
+      spacing: { after: 40 }
     }));
   }
 
-  // Mandatory Title (Defaults to Exam)
   children.push(new Paragraph({
     text: displayTitle,
     heading: HeadingLevel.HEADING_2,
     alignment: AlignmentType.CENTER,
-    spacing: { after: 200 }
+    spacing: { after: 120 }
   }));
 
-  // Compact Metadata Grid
   children.push(new Table({
     width: { size: 100, type: WidthType.PERCENTAGE },
     rows: [
       new TableRow({
         children: [
-          new TableCell({ children: [new Paragraph({ text: `Subject: ${metadata.subject}`, size: 20 })] }),
-          new TableCell({ children: [new Paragraph({ text: `Grade: ${metadata.grade}`, alignment: AlignmentType.RIGHT, size: 20 })] }),
+          new TableCell({ children: [new Paragraph({ text: `Subject: ${metadata.subject}`, size: 18 })] }),
+          new TableCell({ children: [new Paragraph({ text: `Grade: ${metadata.grade}`, alignment: AlignmentType.RIGHT, size: 18 })] }),
         ],
       }),
       new TableRow({
         children: [
-          new TableCell({ children: [new Paragraph({ text: metadata.duration ? `Duration: ${metadata.duration}` : "", size: 20 })] }),
-          new TableCell({ children: [new Paragraph({ text: `Marks: ${metadata.totalMarks}`, alignment: AlignmentType.RIGHT, size: 20 })] }),
+          new TableCell({ children: [new Paragraph({ text: metadata.duration ? `Duration: ${metadata.duration}` : "", size: 18 })] }),
+          new TableCell({ children: [new Paragraph({ text: `Marks: ${metadata.totalMarks}`, alignment: AlignmentType.RIGHT, size: 18 })] }),
         ],
       }),
     ],
   }));
 
-  children.push(new Paragraph({ text: '', spacing: { after: 200 } }));
+  children.push(new Paragraph({ text: '', spacing: { after: 150 } }));
 
-  // Instructions
   if (metadata.instructions) {
     children.push(new Paragraph({
-      children: [new TextRun({ text: 'Instructions:', bold: true, size: 18 })],
-      spacing: { after: 50 }
+      children: [new TextRun({ text: 'Instructions:', bold: true, size: 16 })],
+      spacing: { after: 40 }
     }));
     children.push(new Paragraph({
       text: metadata.instructions,
-      spacing: { after: 200 },
-      size: 18
+      spacing: { after: 150 },
+      size: 16
     }));
   }
 
@@ -207,10 +203,10 @@ export const exportPaperToWord = async (metadata: PaperMetadata, sections: Secti
     children.push(
       new Paragraph({
         children: [
-          new TextRun({ text: `${section.name.toUpperCase()} (${section.sectionMarks} Marks)`, bold: true, size: 22 })
+          new TextRun({ text: `${section.name.toUpperCase()} (${section.sectionMarks} Marks)`, bold: true, size: 20 })
         ],
-        spacing: { before: 200, after: 100 },
-        border: { bottom: { color: '000000', space: 1, style: BorderStyle.SINGLE, size: 6 } }
+        spacing: { before: 150, after: 50 },
+        border: { bottom: { color: '000000', space: 1, style: BorderStyle.SINGLE, size: 4 } }
       })
     );
 
@@ -221,11 +217,11 @@ export const exportPaperToWord = async (metadata: PaperMetadata, sections: Secti
       children.push(
         new Paragraph({
           children: [
-            new TextRun({ text: `${qIdx + 1}. `, bold: true, size: 20 }),
-            new TextRun({ text: cleanText(q.question_text), size: 20 }),
-            new TextRun({ text: `    [${q.marks}]`, bold: true, size: 20 })
+            new TextRun({ text: `${qIdx + 1}. `, bold: true, size: 18 }),
+            new TextRun({ text: cleanText(q.question_text), size: 18 }),
+            new TextRun({ text: `    [${q.marks}]`, bold: true, size: 18 })
           ],
-          spacing: { before: 100, after: 50 }
+          spacing: { before: 80, after: 40 }
         })
       );
 
@@ -237,11 +233,11 @@ export const exportPaperToWord = async (metadata: PaperMetadata, sections: Secti
               children: [
                 new ImageRun({
                   data: imgData,
-                  transformation: { width: 350, height: 250 },
+                  transformation: { width: 320, height: 220 },
                 } as any),
               ],
               alignment: AlignmentType.CENTER,
-              spacing: { before: 100, after: 100 }
+              spacing: { before: 80, after: 80 }
             })
           );
         }
@@ -249,14 +245,14 @@ export const exportPaperToWord = async (metadata: PaperMetadata, sections: Secti
     }
   }
 
-  // Answer Key Page
+  // Answer Key Page - Mandatory Break
   children.push(new PageBreak());
   children.push(
     new Paragraph({
-      text: "OFFICIAL ANSWER KEY",
+      text: "ANSWER KEY",
       heading: HeadingLevel.HEADING_2,
       alignment: AlignmentType.CENTER,
-      spacing: { before: 200, after: 200 }
+      spacing: { before: 150, after: 150 }
     })
   );
 
@@ -265,7 +261,7 @@ export const exportPaperToWord = async (metadata: PaperMetadata, sections: Secti
       new Paragraph({
         text: section.name.toUpperCase(),
         heading: HeadingLevel.HEADING_3,
-        spacing: { before: 150, after: 50 }
+        spacing: { before: 100, after: 40 }
       })
     );
 
@@ -275,10 +271,10 @@ export const exportPaperToWord = async (metadata: PaperMetadata, sections: Secti
       children.push(
         new Paragraph({
           children: [
-            new TextRun({ text: `${qIdx + 1}. `, bold: true, size: 18 }),
-            new TextRun({ text: q.answer_key || "No key provided.", size: 18 })
+            new TextRun({ text: `${qIdx + 1}. `, bold: true, size: 16 }),
+            new TextRun({ text: q.answer_key || "No key provided.", size: 16 })
           ],
-          spacing: { before: 50, after: 25 }
+          spacing: { before: 40, after: 20 }
         })
       );
     }
