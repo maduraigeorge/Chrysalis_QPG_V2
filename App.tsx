@@ -8,7 +8,6 @@ import {
   Smartphone,
   Database,
   FileText,
-  // DO: replace non-existent Butterfly icon with Sparkles
   Sparkles,
   ChevronRight,
   User,
@@ -21,7 +20,8 @@ import {
   Palette,
   UserCheck,
   ShieldAlert,
-  Filter
+  Filter,
+  Menu
 } from 'lucide-react';
 import { AppMode, Question, PaperMetadata, Section, UserRole } from './types';
 import SelectionPanel from './components/SelectionPanel';
@@ -39,22 +39,25 @@ const App: React.FC = () => {
   const [dbInitializing, setDbInitializing] = useState(true);
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<number[]>([]);
   const [lastFilters, setLastFilters] = useState<{ subject: string; grade: string; lessonIds: number[]; loIds: number[] } | null>(null);
-  const [showWorkbench, setShowWorkbench] = useState(true);
   
+  // Logic to reset selection panel when switching modes
+  const [selectionKey, setSelectionKey] = useState(0);
+
   // UI States
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
   const [loginForm, setLoginForm] = useState({ username: '', password: '' });
   const [loginError, setLoginError] = useState('');
 
   const [paperMetadata, setPaperMetadata] = useState<PaperMetadata>({
-    title: 'Semester Final Examination',
+    title: '',
     subject: '',
     grade: '',
-    totalMarks: 50,
-    duration: '2 Hours',
-    instructions: '1. All questions are compulsory.\n2. Use of calculators is permitted where specified.',
-    schoolName: 'Greenwood International School',
+    totalMarks: 0,
+    duration: '',
+    instructions: '',
+    schoolName: '',
     schoolLogo: ''
   });
   
@@ -76,6 +79,7 @@ const App: React.FC = () => {
   const handleScopeChange = async (filters: { subject: string; grade: string; lessonIds: number[]; loIds: number[] }) => {
     setLoading(true);
     setLastFilters(filters);
+    setIsMobileSidebarOpen(false); // Auto-close sidebar on mobile after sync
     try {
       const data = await apiService.getQuestions(filters);
       setQuestions(data);
@@ -88,16 +92,15 @@ const App: React.FC = () => {
     }
   };
 
-  const refreshQuestions = async () => {
-    if (lastFilters) {
-      const data = await apiService.getQuestions(lastFilters);
-      setQuestions(data);
-    }
+  const resetTopicSelector = () => {
+    setSelectionKey(prev => prev + 1);
+    setQuestions([]);
+    setSelectedQuestionIds([]);
   };
 
   const toggleQuestionSelection = (id: number) => {
     setSelectedQuestionIds(prev => 
-      prev.includes(id) ? prev.filter(qid => qid !== id) : [...prev, id]
+      prev.includes(id) ? prev.filter(i => i !== id) : [...prev, id]
     );
   };
 
@@ -130,12 +133,23 @@ const App: React.FC = () => {
     window.location.reload();
   };
 
+  const handleReturnToBank = () => {
+    setMode(AppMode.BANK);
+    resetTopicSelector();
+  };
+
   if (dbInitializing) {
     return (
-      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-white font-black text-center">
-        <div className="flex flex-col items-center gap-6">
-          <Database size={64} className="text-indigo-400 animate-pulse" />
-          <h1 className="text-2xl">Initializing Chrysalis Core...</h1>
+      <div className="min-h-screen bg-slate-900 flex items-center justify-center p-6 text-white font-black text-center relative overflow-hidden">
+        <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-indigo-500/10 rounded-full blur-[160px] animate-pulse"></div>
+        <div className="flex flex-col items-center gap-8 relative z-10">
+          <div className="w-24 h-24 bg-indigo-500 rounded-[2.5rem] flex items-center justify-center shadow-2xl shadow-indigo-500/20 rotate-12 animate-bounce">
+            <Database size={48} className="text-white" />
+          </div>
+          <div className="space-y-2">
+            <h1 className="text-3xl tracking-tight">Awakening Chrysalis...</h1>
+            <p className="text-slate-400 font-bold uppercase tracking-[0.4em] text-[10px]">Readying Curriculum Infrastructure</p>
+          </div>
         </div>
       </div>
     );
@@ -145,172 +159,211 @@ const App: React.FC = () => {
   const isBankMode = mode === AppMode.BANK;
 
   return (
-    <div className="min-h-screen bg-[#fcfdff] flex flex-col selection:bg-indigo-100 relative">
-      <div className="fixed inset-0 -z-10 opacity-30 pointer-events-none">
-        <div className="absolute top-0 right-0 w-[500px] h-[500px] bg-indigo-300 rounded-full blur-[120px] animate-pulse"></div>
-        <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-rose-200 rounded-full blur-[120px] animate-bounce duration-[10000ms]"></div>
+    <div className="min-h-screen bg-[#f8fafc] flex flex-col selection:bg-indigo-100 relative">
+      <div className="fixed inset-0 -z-10 opacity-30 pointer-events-none overflow-hidden">
+        <div className="absolute top-[-10%] right-[-10%] w-[500px] h-[500px] bg-indigo-200 rounded-full blur-[120px] animate-pulse"></div>
+        <div className="absolute bottom-[-10%] left-[-10%] w-[500px] h-[500px] bg-rose-100 rounded-full blur-[120px]"></div>
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] bg-sky-50 rounded-full blur-[150px]"></div>
       </div>
 
-      <nav className="bg-white/80 backdrop-blur-md border-b border-slate-100 sticky top-0 z-[60] no-print h-20 shadow-sm">
-        <div className="max-w-[1600px] mx-auto px-8 h-full flex items-center justify-between">
-          <div className="flex items-center gap-4 cursor-pointer group" onClick={() => { setMode(AppMode.BANK); setQuestions([]); }}>
-            <div className="w-12 h-12 bg-gradient-to-tr from-indigo-600 via-indigo-500 to-purple-500 rounded-2xl flex items-center justify-center shadow-xl shadow-indigo-100 group-hover:scale-110 transition-transform">
-              {/* DO: replace non-existent Butterfly icon with Sparkles */}
-              <Sparkles className="text-white w-7 h-7" />
+      <nav className="bg-white/95 backdrop-blur-md border-b-2 border-slate-300 sticky top-0 z-[60] no-print h-16 md:h-20 shadow-md">
+        <div className="max-w-[1600px] mx-auto px-4 md:px-8 h-full flex items-center justify-between">
+          <div className="flex items-center gap-2 md:gap-4 cursor-pointer group" onClick={handleReturnToBank}>
+            <div className="w-9 h-9 md:w-11 md:h-11 bg-gradient-to-tr from-indigo-600 to-indigo-800 rounded-xl flex items-center justify-center shadow-lg group-hover:rotate-6 transition-all duration-300">
+              <Sparkles className="text-white w-5 h-5 md:w-6 md:h-6" />
             </div>
-            <div className="flex flex-col">
-              <span className="text-xl font-black tracking-tight text-slate-900 leading-none">Chrysalis</span>
-              <span className="text-[10px] font-black text-indigo-500 uppercase tracking-[0.2em] mt-1.5">QP Generator</span>
+            <div className="hidden sm:flex flex-col">
+              <span className="text-lg md:text-xl font-black tracking-tight text-slate-900 leading-none">Chrysalis</span>
+              <span className="text-[8px] md:text-[9px] font-black text-indigo-600 uppercase tracking-[0.2em] mt-1">SaaS Portal</span>
             </div>
           </div>
           
-          <div className="flex items-center gap-2 bg-slate-50 border border-slate-100 p-1.5 rounded-2xl shadow-inner">
+          <div className="flex items-center gap-1 bg-slate-100 border-2 border-slate-200 p-1 rounded-xl md:rounded-2xl">
             <button 
               onClick={() => setMode(AppMode.BANK)}
-              className={`px-8 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${mode === AppMode.BANK ? 'bg-white text-indigo-600 shadow-md scale-105' : 'text-slate-500 hover:text-slate-800'}`}
+              className={`px-3 md:px-6 py-2 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1 md:gap-2 ${mode === AppMode.BANK ? 'bg-white text-indigo-600 shadow-md scale-105 border border-slate-300' : 'text-slate-500 hover:text-slate-800'}`}
             >
-              <FileText size={16} /> Question Bank
+              <FileText size={12} className="md:w-[14px]" /> <span className="hidden sm:inline">Question Bank</span><span className="sm:hidden">Bank</span>
             </button>
-            <div className="w-px h-6 bg-slate-200 mx-1"></div>
             <button 
               onClick={() => setMode(AppMode.PAPER)}
-              className={`px-8 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${mode === AppMode.PAPER ? 'bg-white text-indigo-600 shadow-md scale-105' : 'text-slate-500 hover:text-slate-800'}`}
+              className={`px-3 md:px-6 py-2 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1 md:gap-2 ${mode === AppMode.PAPER ? 'bg-white text-indigo-600 shadow-md scale-105 border border-slate-300' : 'text-slate-500 hover:text-slate-800'}`}
             >
-              <LayoutDashboard size={16} /> Question Paper
+              <LayoutDashboard size={12} className="md:w-[14px]" /> <span className="hidden sm:inline">Paper Designer</span><span className="sm:hidden">Designer</span>
             </button>
             {role === UserRole.ADMIN && (
-              <>
-                <div className="w-px h-6 bg-slate-200 mx-1"></div>
-                <button 
-                  onClick={() => setMode(AppMode.ADMIN)}
-                  className={`px-8 py-2.5 rounded-xl text-xs font-black transition-all flex items-center gap-2 ${mode === AppMode.ADMIN ? 'bg-white text-rose-600 shadow-md scale-105' : 'text-slate-500 hover:text-slate-800'}`}
-                >
-                  <ShieldAlert size={16} /> Admin Console
-                </button>
-              </>
+              <button 
+                onClick={() => setMode(AppMode.ADMIN)}
+                className={`px-3 md:px-6 py-2 rounded-lg md:rounded-xl text-[8px] md:text-[10px] font-black uppercase tracking-widest transition-all flex items-center gap-1 md:gap-2 ${mode === AppMode.ADMIN ? 'bg-white text-rose-600 shadow-md scale-105 border border-slate-300' : 'text-slate-500 hover:text-slate-800'}`}
+              >
+                <ShieldAlert size={12} className="md:w-[14px]" /> <span className="hidden sm:inline">Admin</span>
+              </button>
             )}
           </div>
 
           <div className="relative">
             <button 
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className={`flex items-center gap-4 bg-white border py-2 pl-2 pr-5 rounded-2xl shadow-sm hover:shadow-md transition-all ${isMenuOpen ? 'ring-2 ring-indigo-500 border-indigo-500' : 'border-slate-100'}`}
+              className={`flex items-center gap-2 md:gap-3 bg-white border-2 py-1 md:py-1.5 pl-1 md:pl-1.5 pr-2 md:pr-4 rounded-xl shadow-md transition-all ${isMenuOpen ? 'border-indigo-400' : 'border-slate-300'}`}
             >
-              <div className={`w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shadow-lg bg-gradient-to-br ${role === UserRole.ADMIN ? 'from-rose-500 to-orange-500 shadow-rose-100' : 'from-indigo-500 to-purple-500 shadow-indigo-100'}`}>
+              <div className={`w-7 h-7 md:w-9 md:h-9 rounded-lg flex items-center justify-center text-white font-black text-[10px] md:text-xs shadow-md bg-gradient-to-br ${role === UserRole.ADMIN ? 'from-rose-500 to-rose-700' : 'from-indigo-500 to-indigo-700'}`}>
                 {role === UserRole.ADMIN ? 'AD' : 'TR'}
               </div>
-              <div className="flex flex-col text-left">
-                <span className="text-xs font-black text-slate-800">{role === UserRole.ADMIN ? 'Admin' : 'Teacher Pro'}</span>
-                <span className="text-[10px] font-bold text-slate-400">Account</span>
+              <div className="hidden sm:flex flex-col text-left">
+                <span className="text-[10px] md:text-[11px] font-black text-slate-800 tracking-tight leading-none">{role === UserRole.ADMIN ? 'Admin' : 'Teacher'}</span>
+                <span className="text-[8px] font-bold text-slate-400 uppercase">Verified</span>
               </div>
-              <ChevronDown size={14} className={`text-slate-300 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown size={12} className={`text-slate-400 transition-transform ${isMenuOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {isMenuOpen && (
-              <div className="absolute top-full right-0 mt-3 w-64 bg-white rounded-3xl shadow-2xl border border-slate-50 p-4 animate-in fade-in slide-in-from-top-4 duration-300 z-[70]">
-                <div className="space-y-1">
-                  {role === UserRole.TEACHER ? (
-                    <button 
-                      onClick={() => { setShowAdminLogin(true); setIsMenuOpen(false); }} 
-                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all font-bold text-xs"
-                    >
-                      <ShieldCheck size={18} /> Admin Verification
-                    </button>
-                  ) : (
-                    <button 
-                      onClick={() => { setRole(UserRole.TEACHER); setMode(AppMode.BANK); setIsMenuOpen(false); }} 
-                      className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-slate-600 hover:bg-indigo-50 hover:text-indigo-600 transition-all font-bold text-xs"
-                    >
-                      <UserCheck size={18} /> Switch to Teacher
-                    </button>
-                  )}
-                  {/* DO: add comment above each fix. */}
-                  {/* Fix: use onClick instead of non-existent logout prop for button element */}
-                  <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl text-rose-500 hover:bg-rose-50 transition-all font-bold text-xs">
-                    <LogOut size={18} /> Sign Out
+              <div className="absolute top-full right-0 mt-3 w-48 md:w-56 bg-white rounded-2xl shadow-2xl border-2 border-slate-300 p-2 animate-in fade-in slide-in-from-top-4 duration-200 z-[70]">
+                {role === UserRole.TEACHER ? (
+                  <button 
+                    onClick={() => { setShowAdminLogin(true); setIsMenuOpen(false); }} 
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 font-black text-[9px] uppercase tracking-widest"
+                  >
+                    <ShieldCheck size={16} /> Admin Login
                   </button>
-                </div>
+                ) : (
+                  <button 
+                    onClick={() => { setRole(UserRole.TEACHER); handleReturnToBank(); setIsMenuOpen(false); }} 
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-slate-600 hover:bg-slate-100 font-black text-[9px] uppercase tracking-widest"
+                  >
+                    <UserCheck size={16} /> Teacher Mode
+                  </button>
+                )}
+                <div className="h-0.5 bg-slate-100 my-1 mx-2"></div>
+                <button onClick={logout} className="w-full flex items-center gap-3 px-4 py-3 rounded-xl text-rose-500 hover:bg-rose-50 font-black text-[9px] uppercase tracking-widest">
+                  <LogOut size={16} /> Logout
+                </button>
               </div>
             )}
           </div>
         </div>
       </nav>
 
-      <main className="flex-1 max-w-[1600px] mx-auto w-full px-8 py-10 no-print flex gap-10 pb-56">
+      <main className="flex-1 max-w-[1600px] mx-auto w-full px-4 md:px-8 py-4 md:py-8 no-print flex flex-col md:flex-row gap-4 md:gap-8 pb-32">
         {mode === AppMode.ADMIN ? (
           <div className="w-full"><AdminPanel /></div>
         ) : (
-          <>
-            {isBankMode && (
-              <aside className="w-[380px] shrink-0 sticky top-28 h-fit">
-                <SelectionPanel onScopeChange={handleScopeChange} />
-              </aside>
-            )}
-
-            <section className={`flex-1 min-w-0 ${isPaperMode ? 'max-w-5xl mx-auto w-full' : ''}`}>
-              <div className="space-y-10">
-                <div className="flex items-center justify-between">
-                  <div className="space-y-1.5">
-                    <h1 className="text-4xl font-black text-slate-900 tracking-tight">
-                      {mode === AppMode.BANK ? 'Question Bank' : 'Paper Designer'}
-                    </h1>
-                    <p className="text-slate-400 font-bold text-xs uppercase tracking-[0.3em]">
-                      {mode === AppMode.BANK ? 'Curate Academic Content' : 'Structure High-Fidelity Exams'}
-                    </p>
-                  </div>
-                  
-                  {isPaperMode && (
-                    <button 
-                      onClick={() => setMode(AppMode.BANK)}
-                      className="text-[10px] font-black text-indigo-600 uppercase tracking-widest bg-white border border-indigo-100 px-6 py-3 rounded-2xl flex items-center gap-2 hover:bg-indigo-50 transition-all"
-                    >
-                      <ArrowLeft size={14} /> Return to Bank
-                    </button>
-                  )}
+          <div className="flex flex-col md:flex-row w-full gap-4 md:gap-8">
+            {isBankMode ? (
+              <>
+                {/* Mobile Sidebar Trigger */}
+                <div className="md:hidden flex justify-between items-center bg-white p-4 rounded-2xl border-2 border-slate-300 shadow-sm sticky top-[72px] z-40">
+                   <div className="flex flex-col">
+                      <span className="text-[10px] font-black text-slate-900 uppercase tracking-widest leading-none">Curriculum Scope</span>
+                      <span className="text-[8px] font-bold text-indigo-600 uppercase mt-1">{paperMetadata.subject || 'Select Subject'}</span>
+                   </div>
+                   <button 
+                    onClick={() => setIsMobileSidebarOpen(true)}
+                    className="bg-indigo-600 text-white p-2.5 rounded-xl shadow-lg active:scale-95 transition-transform flex items-center gap-2 text-[10px] font-black uppercase tracking-widest"
+                   >
+                     <Filter size={16} /> Filter
+                   </button>
                 </div>
 
-                {mode === AppMode.BANK ? (
-                  <QuestionListing 
-                    questions={questions} 
-                    loading={loading}
-                    selectedIds={selectedQuestionIds}
-                    onToggle={toggleQuestionSelection}
-                    onToggleAll={setBulkQuestionSelection}
-                    metadata={paperMetadata}
-                    onDesignPaper={() => setMode(AppMode.PAPER)}
-                  />
-                ) : (
+                {/* Sidebar - Desktop Sticky / Mobile Overlay */}
+                <aside className={`
+                  ${isMobileSidebarOpen ? 'fixed inset-0 z-[100] bg-slate-900/60 backdrop-blur-sm p-4' : 'hidden md:block'} 
+                  w-full md:w-[320px] shrink-0 sticky md:top-28 h-fit
+                `}>
+                  <div className={`relative h-full md:h-auto animate-in slide-in-from-left duration-300`}>
+                    {isMobileSidebarOpen && (
+                      <button 
+                        onClick={() => setIsMobileSidebarOpen(false)}
+                        className="absolute -top-3 -right-3 bg-white text-slate-900 p-2.5 rounded-full border-2 border-slate-300 shadow-xl z-[110] md:hidden active:scale-90"
+                      >
+                        <X size={20} strokeWidth={3} />
+                      </button>
+                    )}
+                    <SelectionPanel key={selectionKey} onScopeChange={handleScopeChange} />
+                  </div>
+                </aside>
+
+                <section className="flex-1 min-w-0">
+                  <div className="space-y-6 md:space-y-8">
+                    <div className="hidden md:flex items-center justify-between px-1">
+                      <div className="space-y-1">
+                        <h1 className="text-3xl font-black text-slate-900 tracking-tight">Question Bank</h1>
+                        <p className="text-slate-500 font-black text-[10px] uppercase tracking-[0.3em] flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
+                          Curriculum Exploration
+                        </p>
+                      </div>
+                    </div>
+
+                    <QuestionListing 
+                      questions={questions} 
+                      loading={loading}
+                      selectedIds={selectedQuestionIds}
+                      onToggle={toggleQuestionSelection}
+                      onToggleAll={setBulkQuestionSelection}
+                      metadata={paperMetadata}
+                      onDesignPaper={() => setMode(AppMode.PAPER)}
+                    />
+                  </div>
+                </section>
+              </>
+            ) : (
+              <section className="flex-1 max-w-[1100px] mx-auto w-full">
+                <div className="space-y-6 md:space-y-8">
+                  <div className="flex items-center justify-between px-1">
+                    <div className="space-y-1">
+                      <h1 className="text-xl md:text-3xl font-black text-slate-900 tracking-tight">Paper Designer</h1>
+                      <p className="hidden xs:flex text-slate-500 font-black text-[10px] uppercase tracking-[0.3em] items-center gap-2">
+                        <span className="w-1.5 h-1.5 bg-indigo-500 rounded-full"></span>
+                        Exam Structuring
+                      </p>
+                    </div>
+                    
+                    <button 
+                      onClick={handleReturnToBank}
+                      className="text-[8px] md:text-[9px] font-black text-indigo-700 uppercase tracking-widest bg-white border-2 md:border-4 border-slate-300 px-3 md:px-6 py-2 md:py-3 rounded-xl flex items-center gap-2 hover:bg-slate-50 transition-all shadow-md active:scale-95"
+                    >
+                      <ArrowLeft size={14} className="md:w-4" strokeWidth={3} /> <span className="hidden xs:inline">Reset & Return</span><span className="xs:hidden">Return</span>
+                    </button>
+                  </div>
+
                   <QuestionPaperCreator 
                     questions={questions}
                     metadata={paperMetadata}
                     onMetadataChange={setPaperMetadata}
                     sections={sections}
                     onSectionsChange={setSections}
-                    onRefreshQuestions={refreshQuestions}
                   />
-                )}
-              </div>
-            </section>
-          </>
+                </div>
+              </section>
+            )}
+          </div>
         )}
       </main>
 
       {showAdminLogin && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-md z-[200] flex items-center justify-center p-6">
-          <div className="bg-white rounded-[3rem] shadow-2xl w-full max-w-md overflow-hidden animate-in fade-in zoom-in duration-300">
-            <div className="bg-slate-900 p-12 text-white relative text-center">
-              <button onClick={() => setShowAdminLogin(false)} className="absolute top-8 right-8 hover:bg-white/20 p-2 rounded-full transition-colors"><X size={20} /></button>
-              <div className="w-20 h-20 bg-indigo-500 rounded-3xl flex items-center justify-center mb-8 mx-auto shadow-xl shadow-indigo-500/20"><Lock size={40} /></div>
-              <h2 className="text-3xl font-black">Authorized Only</h2>
-              <p className="text-slate-400 mt-2 font-bold uppercase tracking-widest text-[10px]">Credential verification required</p>
-            </div>
-            <form onSubmit={handleAdminLogin} className="p-12 space-y-8">
-              {loginError && <div className="bg-rose-50 text-rose-600 p-5 rounded-2xl text-xs font-black border border-rose-100 uppercase tracking-widest">{loginError}</div>}
-              <div className="space-y-4">
-                <input type="text" autoFocus required value={loginForm.username} onChange={e => setLoginForm({...loginForm, username: e.target.value})} className="w-full bg-slate-50 border-transparent rounded-2xl px-6 py-4.5 font-bold text-slate-700 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 border border-slate-100 transition-all" placeholder="Username" />
-                <input type="password" required value={loginForm.password} onChange={e => setLoginForm({...loginForm, password: e.target.value})} className="w-full bg-slate-50 border-transparent rounded-2xl px-6 py-4.5 font-bold text-slate-700 focus:bg-white focus:ring-4 focus:ring-indigo-500/10 border border-slate-100 transition-all" placeholder="Password" />
+        <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-sm z-[200] flex items-center justify-center p-4">
+          <div className="bg-white rounded-[2rem] shadow-2xl w-full max-w-md overflow-hidden animate-in zoom-in duration-300 border-4 border-slate-400">
+            <div className="bg-slate-900 p-6 md:p-10 text-white text-center">
+              <div className="w-12 h-12 md:w-16 md:h-16 bg-indigo-600 rounded-2xl flex items-center justify-center mb-4 md:mb-6 mx-auto shadow-lg">
+                <Lock size={32} className="w-8 h-8 md:w-10 md:h-10 text-white" strokeWidth={2.5} />
               </div>
-              <button type="submit" className="w-full bg-indigo-600 text-white py-5 rounded-2xl font-black uppercase tracking-widest shadow-xl active:scale-[0.98] transition-all text-xs">Unlock Registry</button>
+              <h2 className="text-xl md:text-2xl font-black tracking-tight">Admin Portal</h2>
+              <p className="text-slate-400 mt-2 font-bold uppercase tracking-widest text-[9px]">Restricted Access Area</p>
+            </div>
+            <form onSubmit={handleAdminLogin} className="p-6 md:p-10 space-y-6">
+              {loginError && <div className="bg-rose-50 text-rose-600 p-4 rounded-xl text-[10px] font-black border-2 border-rose-200 uppercase tracking-widest text-center">{loginError}</div>}
+              <div className="space-y-4">
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Username</label>
+                  <input type="text" autoFocus required value={loginForm.username} onChange={e => setLoginForm({...loginForm, username: e.target.value})} className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-4 py-3 font-bold text-slate-800 focus:border-indigo-500 shadow-inner" placeholder="Enter Admin" />
+                </div>
+                <div className="space-y-1.5">
+                  <label className="text-[9px] font-black text-slate-500 uppercase tracking-widest ml-1">Password</label>
+                  <input type="password" required value={loginForm.password} onChange={e => setLoginForm({...loginForm, password: e.target.value})} className="w-full bg-slate-50 border-2 border-slate-300 rounded-xl px-4 py-3 font-bold text-slate-800 focus:border-indigo-500 shadow-inner" placeholder="Enter Reset@123" />
+                </div>
+              </div>
+              <button type="submit" className="w-full bg-slate-900 text-white py-4 rounded-xl font-black uppercase tracking-widest shadow-xl hover:bg-slate-800 transition-all">Authorize Access</button>
+              <button type="button" onClick={() => setShowAdminLogin(false)} className="w-full text-slate-400 font-black text-[10px] uppercase tracking-widest py-2">Cancel</button>
             </form>
           </div>
         </div>

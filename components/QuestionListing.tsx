@@ -13,7 +13,7 @@ import {
   Target, 
   FileText, 
   LayoutDashboard,
-  ChevronUp,
+  ChevronUp, 
   FileSpreadsheet,
   Printer,
   ChevronRight,
@@ -66,32 +66,6 @@ const QuestionListing: React.FC<Props> = ({ questions, loading, selectedIds, onT
     setIsExportMenuOpen(false);
   };
 
-  const handleExportJson = () => {
-    const selected = questions.filter(q => selectedIds.includes(q.id));
-    if (selected.length === 0) return alert("Select questions first.");
-    
-    const exportData = {
-      subject: metadata.subject,
-      grade: metadata.grade,
-      exportDate: new Date().toISOString(),
-      count: selected.length,
-      questions: selected.map(q => ({
-        id: q.id,
-        text: cleanText(q.question_text),
-        answer_key: q.answer_key || "", // Explicit fallback
-        marks: q.marks,
-        type: q.question_type,
-        image: q.image_url,
-        lesson: q.lesson_title,
-        outcome: q.lo_description
-      }))
-    };
-    
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
-    saveAs(blob, `Question_Bank_${metadata.subject}_${metadata.grade}.json`);
-    setIsExportMenuOpen(false);
-  };
-
   const handleExportExcel = () => {
     const selected = questions.filter(q => selectedIds.includes(q.id));
     if (selected.length === 0) return alert("Select questions first.");
@@ -114,15 +88,22 @@ const QuestionListing: React.FC<Props> = ({ questions, loading, selectedIds, onT
     setIsExportMenuOpen(false);
   };
 
+  const getMarkColor = (marks: number) => {
+    if (marks <= 1) return 'bg-emerald-700 shadow-sm';
+    if (marks <= 3) return 'bg-sky-700 shadow-sm';
+    if (marks <= 5) return 'bg-indigo-700 shadow-sm';
+    return 'bg-purple-800 shadow-sm';
+  }
+
   if (loading) {
     return (
-      <div className="space-y-3">
+      <div className="space-y-4">
         {[1, 2, 3].map(i => (
-          <div key={i} className="bg-white p-4 rounded-2xl border border-slate-100 animate-pulse flex gap-4">
-            <div className="w-8 h-8 bg-slate-50 rounded-lg shrink-0"></div>
-            <div className="flex-1 space-y-2">
-              <div className="h-2 w-1/4 bg-slate-50 rounded"></div>
-              <div className="h-2 w-full bg-slate-50 rounded"></div>
+          <div key={i} className="bg-white p-4 md:p-6 rounded-2xl border-2 border-slate-300 animate-pulse flex gap-3 md:gap-5">
+            <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-100 rounded-xl shrink-0"></div>
+            <div className="flex-1 space-y-3">
+              <div className="h-3 w-1/4 bg-slate-100 rounded-lg"></div>
+              <div className="h-3 w-full bg-slate-100 rounded-lg"></div>
             </div>
           </div>
         ))}
@@ -132,13 +113,13 @@ const QuestionListing: React.FC<Props> = ({ questions, loading, selectedIds, onT
 
   if (questions.length === 0) {
     return (
-      <div className="bg-white rounded-[2rem] border border-dashed border-slate-200 py-24 text-center shadow-inner">
-        <div className="bg-slate-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4 shadow-sm">
-          <HelpCircle className="text-slate-300 w-8 h-8" />
+      <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] border-4 border-dashed border-slate-400 py-16 md:py-24 text-center shadow-2xl relative overflow-hidden px-6">
+        <div className="bg-slate-50 w-16 h-16 md:w-20 md:h-20 rounded-full flex items-center justify-center mx-auto mb-6 shadow-sm border-2 border-slate-400">
+          <HelpCircle className="text-slate-500 w-10 h-10" />
         </div>
-        <h3 className="text-lg font-black text-slate-900 tracking-tight">Question Bank Empty</h3>
-        <p className="text-slate-400 font-bold max-w-sm mx-auto mt-2 uppercase text-[8px] tracking-[0.2em]">
-          Refine your Topic Selector parameters to populate this list.
+        <h3 className="text-lg md:text-xl font-black text-slate-900 tracking-tight">Question Bank Silent</h3>
+        <p className="text-slate-600 font-bold max-w-sm mx-auto mt-3 uppercase text-[8px] md:text-[9px] tracking-[0.2em] leading-relaxed">
+          Sync your Topic Selector to populate the curriculum repository.
         </p>
       </div>
     );
@@ -147,22 +128,27 @@ const QuestionListing: React.FC<Props> = ({ questions, loading, selectedIds, onT
   const sortedMarks = Object.keys(groupedQuestions).map(Number).sort((a, b) => a - b);
 
   return (
-    <div className="space-y-8 pb-32">
-      <div className="flex items-center justify-between bg-white px-6 py-3.5 rounded-2xl border border-slate-100 shadow-sm sticky top-24 z-40 backdrop-blur-md bg-white/90">
-        <div className="flex items-center gap-3">
-          <ListChecks className="text-indigo-600" size={16} />
-          <span className="text-[10px] font-black uppercase tracking-widest text-slate-900">{questions.length} Items Available</span>
+    <div className="space-y-6 md:space-y-8">
+      <div className="flex items-center justify-between bg-white px-4 md:px-6 py-3 md:py-4 rounded-2xl border-2 border-slate-500 shadow-[0_12px_40px_-10px_rgba(0,0,0,0.3)] sticky top-[136px] md:top-24 z-40 backdrop-blur-xl">
+        <div className="flex items-center gap-2 md:gap-3">
+          <div className="w-8 h-8 md:w-9 md:h-9 rounded-xl bg-indigo-50 flex items-center justify-center text-indigo-700 border-2 border-indigo-300 shadow-sm">
+            <ListChecks size={18} strokeWidth={3} />
+          </div>
+          <div className="flex flex-col">
+            <span className="text-[10px] md:text-xs font-black text-slate-900">{questions.length} Items Listed</span>
+            <span className="hidden xs:inline text-[7px] md:text-[8px] font-bold text-slate-600 uppercase tracking-widest">Active Mapping Result</span>
+          </div>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5 md:gap-2">
           <button 
             onClick={() => onToggleAll(questions.map(q => q.id), true)}
-            className="text-[9px] font-black text-slate-600 uppercase tracking-widest hover:bg-slate-50 px-3 py-2 rounded-lg transition-all"
+            className="text-[8px] md:text-[9px] font-black text-indigo-700 uppercase tracking-widest bg-indigo-50 border-2 border-indigo-200 hover:bg-indigo-100 px-3 md:px-4 py-1.5 md:py-2 rounded-xl transition-all active:scale-95 shadow-sm"
           >
             Select All
           </button>
           <button 
             onClick={() => onToggleAll(questions.map(q => q.id), false)}
-            className="text-[9px] font-black text-slate-400 uppercase tracking-widest hover:bg-slate-50 px-3 py-2 rounded-lg transition-all"
+            className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest bg-slate-50 border-2 border-slate-300 hover:bg-slate-100 px-3 md:px-4 py-1.5 md:py-2 rounded-xl transition-all active:scale-95 shadow-sm"
           >
             Clear
           </button>
@@ -172,76 +158,72 @@ const QuestionListing: React.FC<Props> = ({ questions, loading, selectedIds, onT
       {sortedMarks.map(marks => (
         <div key={marks} className="space-y-4">
           <div className="flex items-center gap-3 px-1">
-             <div className="bg-slate-900 text-white px-4 py-1.5 rounded-lg text-[9px] font-black uppercase tracking-widest shadow-md">
-               {marks} Mark Category
+             <div className={`text-white px-4 md:px-5 py-1.5 md:py-2 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest shadow-lg border-2 border-white/20 ${getMarkColor(marks)}`}>
+               {marks} Mark Weight
              </div>
-             <div className="h-px flex-1 bg-slate-100"></div>
+             <div className="h-[2px] flex-1 bg-slate-400"></div>
           </div>
           
-          <div className="space-y-6">
+          <div className="space-y-4 md:space-y-6">
             {Object.entries(groupedQuestions[marks]).map(([type, items]) => (
-              <div key={type} className="space-y-3 ml-2 border-l border-slate-100 pl-6 relative">
-                <div className="absolute top-0 -left-[1px] w-0.5 h-1.5 bg-slate-300"></div>
-                <div className="flex items-center gap-2 mb-2">
-                   <Tag size={10} className="text-slate-400" />
-                   <h4 className="text-[8px] font-black text-slate-400 uppercase tracking-widest">{type}</h4>
+              <div key={type} className="space-y-3 ml-1 md:ml-2 border-l-4 border-slate-400 pl-4 md:pl-6 relative">
+                <div className="absolute top-0 -left-1.5 w-3 h-3 bg-white border-2 border-slate-600 rounded-full"></div>
+                
+                <div className="flex items-center gap-2 mb-3 md:mb-4 bg-white border-2 border-slate-300 rounded-lg px-2.5 md:px-3 py-1 md:py-1.5 w-fit shadow-sm">
+                   <Tag size={10} className="text-indigo-700" strokeWidth={3} />
+                   <h4 className="text-[8px] md:text-[9px] font-black text-slate-900 uppercase tracking-widest">{type} Inventory</h4>
                 </div>
                 
-                <div className="grid grid-cols-1 gap-2">
+                <div className="grid grid-cols-1 gap-3">
                   {items.map(q => (
                     <div 
                       key={q.id} 
-                      className={`group relative bg-white px-4 py-5 rounded-xl border transition-all cursor-pointer ${selectedIds.includes(q.id) ? 'border-indigo-400 bg-indigo-50/20 shadow-sm ring-1 ring-indigo-100' : 'border-slate-100 hover:border-slate-200'}`}
+                      className={`group relative bg-white px-3 md:px-4 py-3 md:py-4 rounded-xl md:rounded-2xl border-2 transition-all cursor-pointer ${selectedIds.includes(q.id) ? 'border-indigo-600 bg-indigo-50/40 shadow-[0_8px_30px_rgb(79,70,229,0.2)] scale-[1.005]' : 'border-slate-300 hover:border-slate-500 shadow-sm'}`}
                       onClick={() => onToggle(q.id)}
                     >
-                      <div className="flex gap-4 items-start">
-                        <div className={`w-5 h-5 rounded-md border flex items-center justify-center shrink-0 transition-all mt-0.5 ${selectedIds.includes(q.id) ? 'bg-indigo-600 border-indigo-600' : 'bg-white border-slate-200 group-hover:border-indigo-300'}`}>
-                          {selectedIds.includes(q.id) && <CheckCircle size={10} className="text-white" />}
+                      <div className="flex gap-3 md:gap-4 items-start">
+                        <div className={`w-6 h-6 md:w-7 md:h-7 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all mt-0.5 ${selectedIds.includes(q.id) ? 'bg-indigo-700 border-indigo-700 text-white shadow-md' : 'bg-white border-slate-400 group-hover:border-indigo-500'}`}>
+                          {selectedIds.includes(q.id) && <CheckCircle size={14} strokeWidth={3} />}
                         </div>
                         
-                        <div className="flex-1 space-y-4">
+                        <div className="flex-1 space-y-3 md:space-y-4">
                           <div>
-                            <p className="text-sm text-slate-800 font-semibold leading-relaxed pr-6">
+                            <p className={`text-xs md:text-sm font-bold leading-relaxed pr-6 ${selectedIds.includes(q.id) ? 'text-indigo-950' : 'text-slate-900'}`}>
                               {cleanText(q.question_text)}
                             </p>
                           </div>
 
                           {q.answer_key && (
-                            <div className="bg-emerald-50/50 border border-emerald-100 rounded-xl px-4 py-3 flex items-start gap-3">
-                              <Key size={14} className="text-emerald-500 mt-0.5 shrink-0" />
+                            <div className="bg-emerald-50 border-2 border-emerald-200 rounded-xl px-3 md:px-4 py-2 md:py-3 flex items-start gap-2 md:gap-3 shadow-inner">
+                              <Key size={14} className="text-emerald-700 mt-0.5 shrink-0" strokeWidth={3} />
                               <div className="flex flex-col">
-                                <span className="text-[9px] font-black text-emerald-600 uppercase tracking-widest">Answer Key</span>
-                                <p className="text-xs font-bold text-emerald-800 leading-normal">{q.answer_key}</p>
+                                <span className="text-[7px] md:text-[9px] font-black text-emerald-800 uppercase tracking-widest mb-0.5">Solution Key</span>
+                                <p className="text-[10px] md:text-xs font-bold text-emerald-950 leading-normal">{q.answer_key}</p>
                               </div>
                             </div>
                           )}
                           
                           {q.image_url && (
-                            <div className="mt-4 w-full max-w-2xl rounded-2xl overflow-hidden border border-slate-100 shadow-sm bg-white">
-                              <img src={q.image_url} alt="Question Asset" className="w-full h-auto object-contain max-h-[400px]" />
+                            <div className="mt-2 w-full max-w-lg rounded-xl overflow-hidden border-2 border-slate-300 bg-white p-1 md:p-2 shadow-md">
+                              <img src={q.image_url} alt="Question Resource" className="w-full h-auto object-contain max-h-[180px] md:max-h-[250px] rounded-lg" />
                             </div>
                           )}
                           
-                          <div className="flex flex-wrap items-center gap-2 pt-1">
-                            <div className="flex items-center gap-1 bg-slate-50 px-2 py-1 rounded-md text-[7px] font-black text-slate-400 uppercase tracking-widest border border-slate-100">
-                              <Layers size={8} />
-                              <span className="max-w-[120px] truncate">{q.lesson_title || 'Uncategorized'}</span>
+                          <div className="flex flex-wrap items-center gap-1.5 md:gap-2 pt-1">
+                            <div className="flex items-center gap-1 bg-slate-100 px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[7px] md:text-[8px] font-black text-slate-800 uppercase tracking-widest border-2 border-slate-300 shadow-sm">
+                              <Layers size={9} strokeWidth={3} />
+                              <span className="max-w-[120px] md:max-w-[150px] truncate">{q.lesson_title || 'General'}</span>
                             </div>
                             {q.lo_description && (
-                              <div className="flex items-center gap-1 bg-rose-50 px-2 py-1 rounded-md text-[7px] font-black text-rose-500 uppercase tracking-widest border border-rose-100">
-                                <Target size={8} />
-                                <span className="max-w-[150px] truncate">{q.lo_description}</span>
+                              <div className="flex items-center gap-1 bg-rose-50 px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[7px] md:text-[8px] font-black text-rose-800 uppercase tracking-widest border-2 border-rose-300 shadow-sm">
+                                <Target size={9} strokeWidth={3} />
+                                <span className="max-w-[140px] md:max-w-[180px] truncate">{q.lo_description}</span>
                               </div>
                             )}
-                            <div className={`flex items-center gap-1 px-2 py-1 rounded-md text-[7px] font-black uppercase tracking-widest border ${q.difficulty === 1 ? 'bg-emerald-50 text-emerald-600 border-emerald-50' : q.difficulty === 2 ? 'bg-amber-50 text-amber-600 border-amber-50' : 'bg-rose-50 text-rose-600 border-rose-50'}`}>
-                              <Star size={8} fill="currentColor" />
+                            <div className={`flex items-center gap-1 px-2 md:px-3 py-1 md:py-1.5 rounded-lg text-[7px] md:text-[8px] font-black uppercase tracking-widest border-2 shadow-sm ${q.difficulty === 1 ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : q.difficulty === 2 ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-rose-50 text-rose-800 border-rose-300'}`}>
+                              <Star size={9} fill="currentColor" strokeWidth={3} />
                               {q.difficulty === 1 ? 'Basic' : q.difficulty === 2 ? 'Medium' : 'Hard'}
                             </div>
-                            {q.image_url && (
-                              <div className="flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-1 rounded-md text-[7px] font-black uppercase tracking-widest border border-blue-100">
-                                <ImageIcon size={8} /> Image Included
-                              </div>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -254,50 +236,47 @@ const QuestionListing: React.FC<Props> = ({ questions, loading, selectedIds, onT
         </div>
       ))}
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white/95 backdrop-blur-3xl border-t border-slate-100 p-4 md:p-6 z-[100] flex justify-center no-print shadow-[0_-10px_40px_-15px_rgba(0,0,0,0.1)]">
-         <div className="max-w-[1600px] w-full flex flex-col md:flex-row items-center justify-between gap-6 px-8">
-            <div className="flex items-center gap-8">
-               <div className="flex flex-col gap-1.5">
-                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-[0.25em] ml-1">Question Bank Core</span>
-                  <div className="flex items-center gap-4">
-                     <div className="bg-indigo-600 text-white px-4 py-1.5 rounded-xl font-black text-base shadow-xl shadow-indigo-200 ring-4 ring-indigo-50">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-4 border-slate-500 py-3 md:py-3 z-[100] flex justify-center no-print shadow-[0_-15px_50px_rgba(0,0,0,0.3)] h-auto md:h-20 items-center">
+         <div className="max-w-[1600px] w-full flex flex-col md:flex-row items-center justify-between gap-3 md:gap-6 px-4 md:px-12 h-full py-3 md:py-0">
+            <div className="flex items-center gap-4 md:gap-6 shrink-0">
+               <div className="flex flex-col">
+                  <span className="text-[8px] md:text-[9px] font-black text-slate-600 uppercase tracking-widest">Active Workbench</span>
+                  <div className="flex items-center gap-3">
+                     <div className="bg-indigo-700 text-white px-3 md:px-4 py-1 md:py-1.5 rounded-xl font-black text-base md:text-lg border-2 border-indigo-400 shrink-0 shadow-lg">
                        {selectedIds.length}
                      </div>
                      <div className="flex flex-col">
-                        <span className="text-sm font-black text-slate-800 tracking-tight">Active Items Selected</span>
-                        <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Ready for curriculum-aligned export</span>
+                        <span className="text-[10px] md:text-xs font-black text-slate-900 tracking-tight">Selected Items</span>
+                        <span className="text-[7px] md:text-[8px] font-bold text-slate-600 uppercase tracking-widest">Ready for export</span>
                      </div>
                   </div>
                </div>
             </div>
 
-            <div className="flex items-center gap-4 w-full md:w-auto">
-              <div className="relative">
+            <div className="flex items-center gap-2 md:gap-3 shrink-0 w-full md:w-auto">
+              <div className="relative flex-1 md:flex-initial">
                 <button 
                   onClick={() => setIsExportMenuOpen(!isExportMenuOpen)}
-                  className="flex items-center gap-3 bg-white text-slate-700 px-8 py-5 rounded-2xl font-black text-xs uppercase tracking-[0.15em] shadow-sm hover:bg-slate-50 transition-all border border-slate-200 active:scale-95"
+                  className="w-full flex items-center justify-center gap-2.5 bg-white text-slate-900 px-4 md:px-6 py-2.5 md:py-3 rounded-xl font-black text-[9px] md:text-[10px] uppercase tracking-widest shadow-xl hover:bg-slate-50 transition-all border-2 md:border-4 border-slate-400 active:scale-95 whitespace-nowrap"
                 >
-                  <FileDown size={18} className="text-indigo-500" /> Export Options
-                  {isExportMenuOpen ? <ChevronDown size={14} className="rotate-180 transition-transform" /> : <ChevronDown size={14} className="transition-transform" />}
+                  <FileDown size={14} className="text-indigo-700" strokeWidth={3} /> 
+                  Export <span className="hidden sm:inline">Center</span>
+                  <ChevronDown size={12} className={`transition-transform duration-300 ${isExportMenuOpen ? 'rotate-180' : ''}`} />
                 </button>
 
                 {isExportMenuOpen && (
-                  <div className="absolute bottom-full right-0 mb-4 w-64 bg-white rounded-3xl shadow-2xl border border-slate-100 p-2 animate-in fade-in slide-in-from-bottom-4 duration-300">
-                    <button onClick={handleExportWord} className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 transition-colors">
-                      <FileText size={16} className="text-blue-500" /> Word (.docx)
+                  <div className="absolute bottom-full right-0 mb-3 w-56 md:w-64 bg-white rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.4)] border-4 border-slate-500 p-2 animate-in fade-in slide-in-from-bottom-4 duration-300 z-[110]">
+                    <div className="px-4 py-2 border-b-2 border-slate-100 mb-2">
+                      <span className="text-[8px] md:text-[9px] font-black text-slate-600 uppercase tracking-widest">Download Options</span>
+                    </div>
+                    <button onClick={handleExportWord} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-indigo-50 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-900 transition-all group">
+                      <div className="w-7 h-7 md:w-8 md:h-8 bg-blue-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform border-2 border-blue-100"><FileText size={16} className="text-blue-600" /></div> Word (.docx)
                     </button>
-                    <button onClick={handleExportRtf} className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 transition-colors">
-                      <FileText size={16} className="text-slate-400" /> RTF (.rtf)
+                    <button onClick={handleExportRtf} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-slate-50 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-900 transition-all group">
+                      <div className="w-7 h-7 md:w-8 md:h-8 bg-slate-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform border-2 border-slate-300"><FileText size={16} className="text-slate-600" /></div> Rich Text (.rtf)
                     </button>
-                    <button onClick={handleExportExcel} className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 transition-colors">
-                      <FileSpreadsheet size={16} className="text-emerald-500" /> Excel (.csv)
-                    </button>
-                    <button onClick={handleExportJson} className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 transition-colors">
-                      <Database size={16} className="text-amber-500" /> JSON (.json)
-                    </button>
-                    <div className="h-px bg-slate-50 my-1 mx-2"></div>
-                    <button onClick={() => { window.print(); setIsExportMenuOpen(false); }} className="w-full flex items-center gap-3 px-5 py-3.5 hover:bg-slate-50 rounded-2xl text-[10px] font-black uppercase tracking-widest text-slate-600 transition-colors">
-                      <Printer size={16} className="text-slate-900" /> PDF (Print)
+                    <button onClick={handleExportExcel} className="w-full flex items-center gap-3 px-4 py-3 hover:bg-emerald-50 rounded-xl text-[9px] md:text-[10px] font-black uppercase tracking-widest text-slate-900 transition-all group">
+                      <div className="w-7 h-7 md:w-8 md:h-8 bg-emerald-50 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform border-2 border-emerald-200"><FileSpreadsheet size={16} className="text-emerald-700" /></div> Excel (.csv)
                     </button>
                   </div>
                 )}
@@ -306,9 +285,9 @@ const QuestionListing: React.FC<Props> = ({ questions, loading, selectedIds, onT
               {onDesignPaper && (
                 <button 
                   onClick={onDesignPaper}
-                  className="w-full md:w-auto bg-slate-900 text-white px-12 py-5 rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-2xl hover:bg-slate-800 transition-all active:scale-[0.98] flex items-center justify-center gap-4 border border-slate-800"
+                  className="flex-1 md:flex-initial bg-slate-900 text-white px-4 md:px-8 py-2.5 md:py-3 rounded-xl font-black text-[9px] md:text-[10px] uppercase tracking-widest shadow-2xl hover:bg-slate-800 transition-all active:scale-[0.98] flex items-center justify-center gap-2.5 border-2 md:border-4 border-slate-700 whitespace-nowrap group"
                 >
-                  <LayoutDashboard size={20} className="text-indigo-400" /> Design Paper
+                  <LayoutDashboard size={16} className="text-indigo-400 group-hover:rotate-6 transition-transform" strokeWidth={3} /> Structure <span className="hidden sm:inline">Paper</span>
                 </button>
               )}
             </div>
