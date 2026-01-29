@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Settings,
@@ -79,6 +78,7 @@ const App: React.FC = () => {
   
   const [sections, setSections] = useState<Section[]>([]);
   const selectorRef = useRef<HTMLDivElement>(null);
+  const lastScrollY = useRef(0);
 
   useEffect(() => {
     const init = async () => {
@@ -101,7 +101,7 @@ const App: React.FC = () => {
     try {
       const data = await apiService.getQuestions(filters);
       setQuestions(data);
-      setSelectedQuestionIds(data.map(q => q.id)); 
+      setSelectedQuestionIds([]); // By default, all questions are unselected
       setPaperMetadata(prev => ({ ...prev, subject: filters.subject, grade: filters.grade }));
       
       setTimeout(() => {
@@ -122,19 +122,22 @@ const App: React.FC = () => {
   /**
    * Automatic Minimization and Auto-Sync on Scroll
    * Triggers when the 'Sync content' button (at the bottom of the SelectionPanel)
-   * has scrolled past 3/4 of the visible screen height.
+   * has scrolled past 3/4 of the visible screen height, but ONLY if scrolling DOWN.
    */
   useEffect(() => {
     const handleScroll = () => {
+      const currentScrollY = window.scrollY;
+      const isScrollingDown = currentScrollY > lastScrollY.current;
+      lastScrollY.current = currentScrollY;
+
       if (mode === AppMode.BANK && questions.length > 0 && !isSelectorMinimized) {
         if (selectorRef.current) {
           const rect = selectorRef.current.getBoundingClientRect();
-          // rect.bottom is the coordinate of the bottom of the selection panel
           // window.innerHeight * 0.25 is the 1/4 mark from the top (3/4 from bottom)
-          // If rect.bottom is less than 25% of the viewport, the button has passed the 3/4 mark.
           const triggerPoint = window.innerHeight * 0.25;
           
-          if (rect.bottom < triggerPoint) {
+          // Only trigger if scrolling down and the bottom of panel has passed the threshold
+          if (isScrollingDown && rect.bottom < triggerPoint) {
             handleScopeChange(draftFilters);
           }
         }
@@ -216,6 +219,8 @@ const App: React.FC = () => {
 
   const handleOpenSelector = () => {
     setIsSelectorMinimized(false);
+    // When expanding, immediately set the ref to avoid accidental triggers
+    lastScrollY.current = 0; 
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 

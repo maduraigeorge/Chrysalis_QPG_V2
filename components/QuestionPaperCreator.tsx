@@ -6,7 +6,7 @@ import {
   ClipboardList, 
   Settings2,
   AlertCircle,
-  CheckCircle2,
+  Check, // Changed from CheckCircle2 to Check
   Image as ImageIcon,
   Building2,
   X,
@@ -514,8 +514,9 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                                 onClick={() => { if (!other && (!capacity || sel)) toggleQuestionInSection(section.id, q.id, needed); }} 
                                 className={`px-3 py-2.5 md:px-4 md:py-3 rounded-xl border-2 transition-all flex items-center gap-3 md:gap-4 ${sel ? 'bg-indigo-50/50 border-indigo-600 shadow-md' : 'bg-white border-slate-300 hover:border-slate-500'} ${other || (capacity && !sel) ? 'opacity-30 grayscale cursor-not-allowed shadow-none' : 'cursor-pointer shadow-sm'}`}
                               >
-                                <div className={`w-5 h-5 md:w-6 md:h-6 rounded-lg border-2 shrink-0 flex items-center justify-center transition-all ${sel ? 'bg-indigo-700 border-indigo-700 text-white shadow-sm' : 'bg-white border-slate-300'}`}>
-                                  {sel && <CheckCircle2 size={12} strokeWidth={3} />}
+                                <div className={`w-5 h-5 md:w-6 md:h-6 rounded-lg border-2 shrink-0 flex items-center justify-center transition-all 
+                                ${sel ? 'bg-indigo-700 border-indigo-700 text-white shadow-sm' : 'bg-white border-slate-300'}`}>
+                                  {sel && <Check size={12} strokeWidth={3} />}
                                 </div>
                                 <div className="flex-1 flex flex-col gap-1 md:gap-1.5">
                                    <div className="flex flex-col md:flex-row gap-3 md:items-start">
@@ -576,7 +577,7 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                            <div className={`h-full transition-all duration-1000 ease-out shadow-[0_0_10px_rgba(255,255,255,0.4)] ${isAligned ? 'bg-gradient-to-r from-emerald-600 to-emerald-800' : 'bg-gradient-to-r from-indigo-600 to-indigo-800'}`} style={{ width: `${Math.min(100, metadata.totalMarks > 0 ? (totalAllocatedMarks/metadata.totalMarks)*100 : 0)}%` }}></div>
                         </div>
                         <div className={`w-5 h-5 md:w-6 md:h-6 rounded-full flex items-center justify-center shadow-lg border-2 ${isAligned ? 'bg-emerald-700 text-white border-emerald-500' : 'bg-white text-slate-500 border-slate-400'}`}>
-                          {isAligned ? <CheckCircle2 className="w-3.5 h-3.5 md:w-4 md:h-4" strokeWidth={4} /> : <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4" strokeWidth={4} />}
+                          {isAligned ? <Check size={3.5} className="w-3.5 h-3.5 md:w-4 md:h-4" strokeWidth={4} /> : <AlertCircle className="w-3.5 h-3.5 md:w-4 md:h-4" strokeWidth={4} />}
                         </div>
                   </div>
                </div>

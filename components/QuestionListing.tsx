@@ -1,8 +1,7 @@
-
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { 
   Image as ImageIcon, 
-  CheckCircle, 
+  Check, 
   HelpCircle, 
   Star, 
   Layers, 
@@ -210,16 +209,18 @@ const QuestionListing: React.FC<Props> = ({
           
           <button 
             onClick={handleBulkToggle}
-            className={`flex items-center gap-2 px-3 md:px-5 py-1.5 md:py-2 rounded-xl transition-all border-2 font-black text-[9px] md:text-[10px] uppercase tracking-widest active:scale-95 shadow-sm ${allSelected ? 'bg-indigo-700 text-white border-indigo-700' : someSelected ? 'bg-indigo-50 text-indigo-700 border-indigo-300' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-500'}`}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg transition-all border-2 font-black text-[9px] uppercase tracking-widest active:scale-95 shadow-sm 
+            ${allSelected ? 'bg-indigo-700 text-white border-indigo-700' : someSelected ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-500'}`}
           >
             {allSelected ? (
-              <CheckSquare size={14} strokeWidth={3} />
+              <CheckSquare size={13} strokeWidth={3} />
             ) : someSelected ? (
-              <MinusSquare size={14} strokeWidth={3} />
+              <MinusSquare size={13} strokeWidth={3} />
             ) : (
-              <Square size={14} strokeWidth={3} />
+              <Square size={13} strokeWidth={3} />
             )}
-            <span className="hidden xs:inline">{allSelected ? 'None' : 'Select All'}</span>
+            {/* Changed from 'None' to 'Unselect All' and removed hidden/xs:inline for consistent visibility */}
+            <span>{allSelected ? 'Unselect All' : 'Select All'}</span>
           </button>
         </div>
       </div>
@@ -252,8 +253,9 @@ const QuestionListing: React.FC<Props> = ({
                         onClick={() => onToggle(q.id)}
                       >
                         <div className="flex gap-3 md:gap-4 items-start">
-                          <div className={`w-6 h-6 md:w-7 md:h-7 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all mt-0.5 ${selectedIds.includes(q.id) ? 'bg-indigo-700 border-indigo-700 text-white shadow-md' : 'bg-white border-slate-400 group-hover:border-indigo-500'}`}>
-                            {selectedIds.includes(q.id) && <CheckCircle size={14} strokeWidth={3} />}
+                          <div className={`w-6 h-6 md:w-7 md:h-7 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all mt-0.5 
+                          ${selectedIds.includes(q.id) ? 'bg-indigo-700 border-indigo-700 text-white shadow-md' : 'bg-white border-slate-400 group-hover:border-indigo-500'}`}>
+                            {selectedIds.includes(q.id) && <Check size={14} strokeWidth={3} />}
                           </div>
                           
                           <div className="flex-1 space-y-3 md:space-y-4">

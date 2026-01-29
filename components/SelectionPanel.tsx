@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Search, 
@@ -44,6 +43,8 @@ const SelectionPanel: React.FC<Props> = ({ initialFilters, onScopeChange, onUpda
   const [selectedGrade, setSelectedGrade] = useState(initialFilters.grade);
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [selectedLessonIds, setSelectedLessonIds] = useState<number[]>(initialFilters.lessonIds);
+  // FIX: Initialize learningOutcomes with an empty array. The actual LearningOutcome objects
+  // are fetched later based on selected lessons. initialFilters.loIds holds IDs, not objects.
   const [learningOutcomes, setLearningOutcomes] = useState<LearningOutcome[]>([]);
   const [selectedLoIds, setSelectedLoIds] = useState<number[]>(initialFilters.loIds);
   
@@ -188,6 +189,8 @@ const SelectionPanel: React.FC<Props> = ({ initialFilters, onScopeChange, onUpda
     return 'from-slate-700 to-slate-900 shadow-slate-200';
   }
 
+  const isSyncEnabled = selectedSubject && selectedGrade && (selectedLessonIds.length > 0 || selectedLoIds.length > 0);
+
   return (
     <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-xl border-4 border-slate-400 overflow-hidden flex flex-col relative">
       <div className="bg-slate-100 px-5 md:px-8 py-4 md:py-5 border-b-2 border-slate-300 flex items-center justify-between z-20">
@@ -254,7 +257,8 @@ const SelectionPanel: React.FC<Props> = ({ initialFilters, onScopeChange, onUpda
                 <h3 className="text-[10px] font-black text-slate-800 uppercase tracking-widest">Select Modules</h3>
                 <button 
                   onClick={handleBulkToggle}
-                  className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest transition-all px-3 py-1.5 rounded-lg border-2 shadow-sm ${allSelected ? 'bg-indigo-700 text-white border-indigo-700' : someSelected ? 'bg-indigo-50 text-indigo-700 border-indigo-300' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-500'}`}
+                  className={`flex items-center gap-1.5 text-[9px] font-black uppercase tracking-widest transition-all px-3 py-1.5 rounded-lg border-2 shadow-sm 
+                  ${allSelected ? 'bg-indigo-700 text-white border-indigo-700' : someSelected ? 'bg-indigo-500 text-white border-indigo-500' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-500'}`}
                 >
                   {allSelected ? <CheckSquare size={13} strokeWidth={3} /> : someSelected ? <MinusSquare size={13} strokeWidth={3} /> : <Square size={13} strokeWidth={3} />}
                   <span>{allSelected ? 'Unselect All' : 'Select All'}</span>
@@ -278,7 +282,8 @@ const SelectionPanel: React.FC<Props> = ({ initialFilters, onScopeChange, onUpda
                         <div className="flex items-center justify-between gap-3 mb-2">
                           <div 
                             onClick={(e) => { e.stopPropagation(); toggleLessonSelection(lesson.id); }}
-                            className={`shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all ${isSelected ? 'bg-indigo-700 border-indigo-700 text-white shadow-sm' : 'bg-white border-slate-300'}`}
+                            className={`shrink-0 w-5 h-5 rounded-md border-2 flex items-center justify-center transition-all 
+                            ${isSelected ? 'bg-indigo-600 border-indigo-600 text-white shadow-sm' : 'bg-white border-slate-300 group-hover:border-indigo-500'}`}
                           >
                             {isSelected && (allSelectedInLesson ? <Check size={12} strokeWidth={4} /> : <div className="w-2 h-0.5 bg-white rounded-full" />)}
                           </div>
@@ -308,7 +313,8 @@ const SelectionPanel: React.FC<Props> = ({ initialFilters, onScopeChange, onUpda
                                   onClick={(e) => { e.stopPropagation(); toggleLoSelection(lo.id, lesson.id); }}
                                   className={`flex items-start gap-2 px-2 py-1.5 rounded-lg text-left cursor-pointer transition-all border ${isLoSelected ? 'bg-indigo-100/50 border-indigo-300 text-indigo-950' : 'bg-white/50 border-transparent hover:bg-slate-50 text-slate-700'}`}
                                 >
-                                   <div className={`shrink-0 w-3.5 h-3.5 rounded border flex items-center justify-center mt-0.5 ${isLoSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-300'}`}>
+                                   <div className={`shrink-0 w-3.5 h-3.5 rounded border flex items-center justify-center mt-0.5 
+                                   ${isLoSelected ? 'bg-indigo-600 border-indigo-600 text-white' : 'bg-white border-slate-300'}`}>
                                     {isLoSelected && <Check size={10} strokeWidth={4} />}
                                   </div>
                                   <span className="text-[9px] font-bold leading-tight">{lo.description}</span>
@@ -336,7 +342,7 @@ const SelectionPanel: React.FC<Props> = ({ initialFilters, onScopeChange, onUpda
         <div className="pt-4 border-t-2 border-slate-200 flex justify-end">
           <button 
             onClick={handleSync}
-            disabled={!selectedSubject || !selectedGrade}
+            disabled={!isSyncEnabled}
             className={`bg-gradient-to-tr ${getSubjectColor(selectedSubject)} text-white px-8 py-3 rounded-xl font-black text-[10px] md:text-xs uppercase tracking-[0.2em] hover:brightness-110 active:scale-95 disabled:grayscale disabled:opacity-30 transition-all shadow-lg flex items-center justify-center gap-3 border-2 border-white/20`}
           >
             <Search size={18} strokeWidth={3} />

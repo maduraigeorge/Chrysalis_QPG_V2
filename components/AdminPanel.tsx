@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
@@ -32,9 +31,9 @@ const AdminPanel: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   
   // Data States
-  const [lessons, setLessons] = useState<Lesson[]>([]);
-  const [los, setLos] = useState<LearningOutcome[]>([]);
-  const [curriculumLessons, setCurriculumLessons] = useState<Lesson[]>([]);
+  const [lessons, setLessons] = useState<Lesson[]>([]); // Lessons for Question form
+  const [los, setLos] = useState<LearningOutcome[]>([]); // LOs for Question form and LO explorer
+  const [curriculumLessons, setCurriculumLessons] = useState<Lesson[]>([]); // Lessons for Curriculum tab explorers
   const [explorerQuestions, setExplorerQuestions] = useState<Question[]>([]);
   
   // Inline Editing States
@@ -72,26 +71,57 @@ const AdminPanel: React.FC = () => {
     } else { setLos([]); }
   };
 
+  // Effect for Question Tab's lesson/LO dropdowns and explorer
   useEffect(() => {
-    const fetch = async () => {
+    const fetchQuestionFormData = async () => {
       const l = await apiService.getLessons(questionForm.subject, questionForm.grade);
       setLessons(l);
+      // If the current lessonId is no longer valid, reset loId
+      if (!l.some(lesson => lesson.id === Number(questionForm.lessonId))) {
+        setQuestionForm(prev => ({ ...prev, lessonId: '', loId: '' }));
+      }
+      // If there's a valid lessonId, fetch its LOs
+      if (questionForm.lessonId) {
+        const loData = await apiService.getLearningOutcomes([Number(questionForm.lessonId)]);
+        setLos(loData);
+        // If the current loId is no longer valid, reset it
+        if (!loData.some(lo => lo.id === Number(questionForm.loId))) {
+          setQuestionForm(prev => ({ ...prev, loId: '' }));
+        }
+      } else {
+        setLos([]); // No lesson selected, no LOs
+      }
       loadQuestionExplorer();
     };
-    fetch();
-  }, [questionForm.subject, questionForm.grade, questionForm.lessonId]);
+    fetchQuestionFormData();
+  }, [questionForm.subject, questionForm.grade, questionForm.lessonId, questionForm.loId]); // Added loId as dependency for its own check
 
+
+  // Effect for Curriculum Tab's explorers
   useEffect(() => {
-    if (curriculumSubTab === 'lesson') loadLessonExplorer();
-    else {
-      const f = async () => {
-        const l = await apiService.getLessons(curriculumForm.loSubject, curriculumForm.loGrade);
-        setCurriculumLessons(l);
-      };
-      f();
-      loadLoExplorer();
-    }
+    const fetchCurriculumData = async () => {
+      if (curriculumSubTab === 'lesson') {
+        loadLessonExplorer();
+      } else { // curriculumSubTab === 'lo'
+        const fetchedLessons = await apiService.getLessons(curriculumForm.loSubject, curriculumForm.loGrade);
+        setCurriculumLessons(fetchedLessons);
+
+        const currentParentLessonIdNum = Number(curriculumForm.loParentLessonId);
+        const isCurrentParentLessonValid = fetchedLessons.some(l => l.id === currentParentLessonIdNum);
+        
+        // If the subject/grade combination changes and the current loParentLessonId is no longer valid,
+        // or if no lesson is selected for the new subject/grade, reset loParentLessonId.
+        // This ensures the LO list updates correctly.
+        if (!isCurrentParentLessonValid && curriculumForm.loParentLessonId !== '') {
+            setCurriculumForm(prev => ({ ...prev, loParentLessonId: '' }));
+        } else {
+            loadLoExplorer();
+        }
+      }
+    };
+    fetchCurriculumData();
   }, [curriculumForm.loSubject, curriculumForm.loGrade, curriculumSubTab, curriculumForm.loParentLessonId]);
+
 
   const showSuccess = (msg: string) => { setSuccessMessage(msg); setTimeout(() => setSuccessMessage(''), 3000); };
 
