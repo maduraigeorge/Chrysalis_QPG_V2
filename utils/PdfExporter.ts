@@ -57,14 +57,19 @@ export const exportPaperToPdf = async (metadata: PaperMetadata) => {
   };
 
   try {
-    // Fix: Correctly resolve the html2pdf function from the ESM import
-    const html2pdfFunc = (html2pdf as any).default || html2pdf;
+    // Standard resolution for both ES modules and CommonJS environments
+    const h2p = (html2pdf as any).default || html2pdf;
     
-    if (typeof html2pdfFunc !== 'function') {
-      throw new Error("html2pdf is not resolved as a function. Check import map or library version.");
+    if (typeof h2p !== 'function') {
+      // Fallback for cases where the bundle is exposed via a 'from' method directly on the import
+      if (typeof (html2pdf as any).from === 'function') {
+        await (html2pdf as any).from(clone).set(options).save();
+      } else {
+        throw new Error("html2pdf library resolution failed. Check build logs.");
+      }
+    } else {
+      await h2p().from(clone).set(options).save();
     }
-
-    await html2pdfFunc().from(clone).set(options).save();
   } catch (error: any) {
     console.error("PDF Generation error:", error);
     alert(`There was an issue generating your PDF: ${error.message || 'Unknown error'}`);

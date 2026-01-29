@@ -1,7 +1,7 @@
 
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle, Table, TableRow, TableCell, WidthType, ImageRun, Footer, PageNumber, PageBreak } from 'docx';
 import saveAs from 'file-saver';
-import { Question, PaperMetadata, Section } from '../types.ts';
+import { Question, PaperMetadata, Section } from '../types';
 
 const cleanText = (text: string) => {
   return text.replace(/^\[item[-_ ]?\d+\]\s*/i, '').replace(/ \[Set \d+-\d+\]$/i, '').trim();

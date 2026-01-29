@@ -31,11 +31,11 @@ import {
   Target,
   LayoutDashboard
 } from 'lucide-react';
-import { Question, PaperMetadata, Section } from '../types.ts';
-import { apiService } from '../apiService.ts';
-import { exportPaperToWord } from '../utils/DocxExporter.ts';
-import { exportPaperToRtf } from '../utils/RtfExporter.ts';
-import { exportPaperToPdf } from '../utils/PdfExporter.ts';
+import { Question, PaperMetadata, Section } from '../types';
+import { apiService } from '../apiService';
+import { exportPaperToWord } from '../utils/DocxExporter';
+import { exportPaperToRtf } from '../utils/RtfExporter';
+import { exportPaperToPdf } from '../utils/PdfExporter';
 import saveAs from 'file-saver';
 
 interface Props {
@@ -79,8 +79,8 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
       id,
       name: `Section ${String.fromCharCode(65 + sections.length)}`,
       questionType: 'MCQ',
-      marksPerQuestion: 1,
-      sectionMarks: 10,
+      marksPerQuestion: 0, 
+      sectionMarks: 0,
       selectedQuestionIds: []
     };
     onSectionsChange([...sections, newSection]);
@@ -456,18 +456,24 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                       </div>
                       <div className="space-y-1.5">
                          <label className="text-[7px] md:text-[8px] font-black text-slate-700 uppercase tracking-widest ml-1">Weight / Item</label>
-                         <input type="number" min="0" value={section.marksPerQuestion} onChange={e => updateSection(section.id, { marksPerQuestion: Math.max(0, Number(e.target.value)), selectedQuestionIds: [] })} className="w-full bg-white border-2 border-slate-400 rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 text-[10px] md:text-xs font-black text-slate-900 shadow-sm" />
+                         <input 
+                           type="number" 
+                           min="0" 
+                           value={section.marksPerQuestion === 0 ? '' : section.marksPerQuestion} 
+                           onChange={e => updateSection(section.id, { marksPerQuestion: Math.max(0, Number(e.target.value)), selectedQuestionIds: [] })} 
+                           className={`w-full bg-white border-2 rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 text-[10px] md:text-xs font-black focus:border-indigo-600 shadow-sm ${section.marksPerQuestion <= 0 ? 'border-rose-400 text-rose-700 bg-rose-50/50' : 'border-slate-400 text-slate-900'}`} 
+                           placeholder="Fill weight"
+                         />
                       </div>
-                      {/* Field for sectionMarks */}
                       <div className="space-y-1.5">
                          <label className="text-[7px] md:text-[8px] font-black text-slate-700 uppercase tracking-widest ml-1">Section Target Marks</label>
                          <input 
                             type="number" 
                             min="1" 
-                            value={section.sectionMarks} 
+                            value={section.sectionMarks === 0 ? '' : section.sectionMarks} 
                             onChange={e => updateSection(section.id, { sectionMarks: Math.max(0, Number(e.target.value)), selectedQuestionIds: [] })} 
                             className={`w-full bg-white border-2 rounded-xl px-2.5 py-1.5 md:px-3 md:py-2 text-[10px] md:text-xs font-black focus:border-indigo-600 shadow-sm ${section.sectionMarks <= 0 ? 'border-rose-400 text-rose-700 bg-rose-50/50' : 'border-slate-400 text-slate-900'}`} 
-                            placeholder="Target marks"
+                            placeholder="Fill target"
                           />
                       </div>
                       <div className="space-y-1.5 col-span-2 md:col-span-4 flex justify-end mt-2">
@@ -508,7 +514,7 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                                 onClick={() => { if (!other && (!capacity || sel)) toggleQuestionInSection(section.id, q.id, needed); }} 
                                 className={`px-3 py-2.5 md:px-4 md:py-3 rounded-xl border-2 transition-all flex items-center gap-3 md:gap-4 ${sel ? 'bg-indigo-50/50 border-indigo-600 shadow-md' : 'bg-white border-slate-300 hover:border-slate-500'} ${other || (capacity && !sel) ? 'opacity-30 grayscale cursor-not-allowed shadow-none' : 'cursor-pointer shadow-sm'}`}
                               >
-                                <div className={`w-5 h-5 md:w-6 md:h-6 rounded-lg border-2 shrink-0 flex items-center justify-center transition-all ${sel ? 'bg-indigo-700 border-indigo-700 text-white shadow-sm' : 'bg-white border-slate-400'}`}>
+                                <div className={`w-5 h-5 md:w-6 md:h-6 rounded-lg border-2 shrink-0 flex items-center justify-center transition-all ${sel ? 'bg-indigo-700 border-indigo-700 text-white shadow-sm' : 'bg-white border-slate-300'}`}>
                                   {sel && <CheckCircle2 size={12} strokeWidth={3} />}
                                 </div>
                                 <div className="flex-1 flex flex-col gap-1 md:gap-1.5">

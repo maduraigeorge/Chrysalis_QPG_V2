@@ -21,11 +21,13 @@ import {
   Database,
   Square,
   CheckSquare,
-  MinusSquare
+  MinusSquare,
+  Filter,
+  Maximize2
 } from 'lucide-react';
-import { Question, PaperMetadata } from '../types.ts';
-import { exportBankToWord } from '../utils/DocxExporter.ts';
-import { exportBankToRtf } from '../utils/RtfExporter.ts';
+import { Question, PaperMetadata } from '../types';
+import { exportBankToWord } from '../utils/DocxExporter';
+import { exportBankToRtf } from '../utils/RtfExporter';
 import saveAs from 'file-saver';
 
 interface Props {
@@ -36,13 +38,25 @@ interface Props {
   onToggleAll: (ids: number[], select: boolean) => void;
   metadata: PaperMetadata;
   onDesignPaper?: () => void;
+  onOpenSelector?: () => void;
+  isSelectorMinimized?: boolean;
 }
 
 const cleanText = (text: string) => {
   return text.replace(/^\[item[_\- ]?\d+\]\s*/i, '').replace(/\s*\[Set \d+\-\d+\]$/i, '').trim();
 };
 
-const QuestionListing: React.FC<Props> = ({ questions, loading, selectedIds, onToggle, onToggleAll, metadata, onDesignPaper }) => {
+const QuestionListing: React.FC<Props> = ({ 
+  questions, 
+  loading, 
+  selectedIds, 
+  onToggle, 
+  onToggleAll, 
+  metadata, 
+  onDesignPaper, 
+  onOpenSelector,
+  isSelectorMinimized 
+}) => {
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
@@ -161,13 +175,13 @@ const QuestionListing: React.FC<Props> = ({ questions, loading, selectedIds, onT
 
   return (
     <div className="space-y-6 md:space-y-8 pb-40 relative">
-      <div className="sticky top-[64px] md:top-[80px] z-50 bg-white/95 backdrop-blur-md px-4 md:px-8 py-2 md:py-3.5 rounded-2xl border-2 border-slate-500 shadow-[0_12px_40px_-10px_rgba(0,0,0,0.3)] flex items-center justify-between transition-all duration-300">
-        <div className="flex items-center gap-3">
+      <div className="sticky top-[64px] md:top-[80px] z-50 bg-white/95 backdrop-blur-md px-3 md:px-8 py-2 md:py-3 rounded-2xl border-2 border-slate-500 shadow-[0_12px_40px_-10px_rgba(0,0,0,0.3)] flex items-center justify-between transition-all duration-300">
+        <div className="flex items-center gap-2 md:gap-3">
           <div className="w-8 h-8 md:w-10 md:h-10 bg-indigo-50 rounded-xl flex items-center justify-center text-indigo-700 shadow-sm border border-indigo-100 shrink-0">
              <Database size={18} className="md:w-5 md:h-5" strokeWidth={3} />
           </div>
           <div className="space-y-0.5">
-            <h1 className="text-lg md:text-xl font-black text-slate-900 tracking-tight leading-tight">Question Bank</h1>
+            <h1 className="text-xs md:text-sm lg:text-base font-black text-slate-900 tracking-tight leading-tight">Question Bank</h1>
             <p className="hidden xs:flex text-slate-500 font-black text-[7px] md:text-[8px] uppercase tracking-[0.2em] items-center gap-1.5">
               <span className="w-1 h-1 bg-indigo-500 rounded-full"></span>
               Inventory Results
@@ -175,7 +189,20 @@ const QuestionListing: React.FC<Props> = ({ questions, loading, selectedIds, onT
           </div>
         </div>
 
-        <div className="flex items-center gap-3 md:gap-5">
+        <div className="flex items-center gap-2 md:gap-4">
+          {isSelectorMinimized && (
+            <button 
+              onClick={onOpenSelector}
+              className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 rounded-xl bg-indigo-700 text-white font-black text-[8px] md:text-[10px] uppercase tracking-widest hover:brightness-110 transition-all shadow-lg active:scale-95 animate-in fade-in slide-in-from-right-4 duration-500"
+            >
+              <Filter size={14} strokeWidth={3} />
+              <span className="hidden sm:inline">Expand Topics</span>
+              <span className="sm:hidden">Topics</span>
+            </button>
+          )}
+
+          <div className="hidden sm:block h-6 w-0.5 bg-slate-200"></div>
+
           <div className="hidden sm:flex flex-col items-end mr-1">
             <span className="text-[10px] md:text-xs font-black text-slate-900 leading-none">{questions.length} Items</span>
             <span className="text-[7px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Sync Ready</span>
@@ -183,7 +210,7 @@ const QuestionListing: React.FC<Props> = ({ questions, loading, selectedIds, onT
           
           <button 
             onClick={handleBulkToggle}
-            className={`flex items-center gap-2 px-3 md:px-5 py-1.5 md:py-2.5 rounded-xl transition-all border-2 font-black text-[9px] md:text-[10px] uppercase tracking-widest active:scale-95 shadow-sm ${allSelected ? 'bg-indigo-700 text-white border-indigo-700' : someSelected ? 'bg-indigo-50 text-indigo-700 border-indigo-300' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-500'}`}
+            className={`flex items-center gap-2 px-3 md:px-5 py-1.5 md:py-2 rounded-xl transition-all border-2 font-black text-[9px] md:text-[10px] uppercase tracking-widest active:scale-95 shadow-sm ${allSelected ? 'bg-indigo-700 text-white border-indigo-700' : someSelected ? 'bg-indigo-50 text-indigo-700 border-indigo-300' : 'bg-white text-slate-600 border-slate-300 hover:border-slate-500'}`}
           >
             {allSelected ? (
               <CheckSquare size={14} strokeWidth={3} />

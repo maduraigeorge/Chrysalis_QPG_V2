@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Settings,
   X,
@@ -26,14 +26,14 @@ import {
   FileWarning,
   Loader2
 } from 'lucide-react';
-import { AppMode, Question, PaperMetadata, Section, UserRole } from './types.ts';
-import SelectionPanel from './components/SelectionPanel.tsx';
-import QuestionListing from './components/QuestionListing.tsx';
-import QuestionPaperCreator from './components/QuestionPaperCreator.tsx';
-import PaperPreview from './components/PaperPreview.tsx';
-import AdminPanel from './components/AdminPanel.tsx';
-import { apiService } from './apiService.ts';
-import { exportPaperToPdf } from './utils/PdfExporter.ts';
+import { AppMode, Question, PaperMetadata, Section, UserRole } from './types';
+import SelectionPanel from './components/SelectionPanel';
+import QuestionListing from './components/QuestionListing';
+import QuestionPaperCreator from './components/QuestionPaperCreator';
+import PaperPreview from './components/PaperPreview';
+import AdminPanel from './components/AdminPanel';
+import { apiService } from './apiService';
+import { exportPaperToPdf } from './utils/PdfExporter';
 
 const App: React.FC = () => {
   const [mode, setMode] = useState<AppMode>(AppMode.BANK);
@@ -43,6 +43,7 @@ const App: React.FC = () => {
   const [isExporting, setIsExporting] = useState(false);
   const [dbInitializing, setDbInitializing] = useState(true);
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<number[]>([]);
+  const [isSelectorMinimized, setIsSelectorMinimized] = useState(false);
   
   // Persistent selection state
   const [selectionFilters, setSelectionFilters] = useState<{ 
@@ -56,6 +57,9 @@ const App: React.FC = () => {
     lessonIds: [],
     loIds: []
   });
+
+  // Track changes in the selector before "syncing"
+  const [draftFilters, setDraftFilters] = useState(selectionFilters);
   
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showAdminLogin, setShowAdminLogin] = useState(false);
@@ -74,6 +78,7 @@ const App: React.FC = () => {
   });
   
   const [sections, setSections] = useState<Section[]>([]);
+  const selectorRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const init = async () => {
@@ -87,6 +92,58 @@ const App: React.FC = () => {
     };
     init();
   }, []);
+
+  const handleScopeChange = async (filters: { subject: string; grade: string; lessonIds: number[]; loIds: number[] }) => {
+    setLoading(true);
+    setSelectionFilters(filters);
+    setDraftFilters(filters); // Align draft with committed filters
+    setIsSelectorMinimized(true); // Minimize after sync
+    try {
+      const data = await apiService.getQuestions(filters);
+      setQuestions(data);
+      setSelectedQuestionIds(data.map(q => q.id)); 
+      setPaperMetadata(prev => ({ ...prev, subject: filters.subject, grade: filters.grade }));
+      
+      setTimeout(() => {
+        const target = document.getElementById('question-listing-results');
+        if (target) {
+          const navHeight = window.innerWidth >= 768 ? 80 : 64;
+          const targetPosition = target.getBoundingClientRect().top + window.pageYOffset - navHeight - 20;
+          window.scrollTo({ top: targetPosition, behavior: 'smooth' });
+        }
+      }, 300);
+    } catch (error) {
+      console.error("Failed to fetch questions", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  /**
+   * Automatic Minimization and Auto-Sync on Scroll
+   * Triggers when the 'Sync content' button (at the bottom of the SelectionPanel)
+   * has scrolled past 3/4 of the visible screen height.
+   */
+  useEffect(() => {
+    const handleScroll = () => {
+      if (mode === AppMode.BANK && questions.length > 0 && !isSelectorMinimized) {
+        if (selectorRef.current) {
+          const rect = selectorRef.current.getBoundingClientRect();
+          // rect.bottom is the coordinate of the bottom of the selection panel
+          // window.innerHeight * 0.25 is the 1/4 mark from the top (3/4 from bottom)
+          // If rect.bottom is less than 25% of the viewport, the button has passed the 3/4 mark.
+          const triggerPoint = window.innerHeight * 0.25;
+          
+          if (rect.bottom < triggerPoint) {
+            handleScopeChange(draftFilters);
+          }
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [mode, questions.length, isSelectorMinimized, draftFilters]);
 
   const isPaperAligned = useMemo(() => {
     const isMetadataComplete = 
@@ -110,30 +167,6 @@ const App: React.FC = () => {
 
     return allSectionsComplete;
   }, [sections, paperMetadata]);
-
-  const handleScopeChange = async (filters: { subject: string; grade: string; lessonIds: number[]; loIds: number[] }) => {
-    setLoading(true);
-    setSelectionFilters(filters);
-    try {
-      const data = await apiService.getQuestions(filters);
-      setQuestions(data);
-      setSelectedQuestionIds(data.map(q => q.id)); 
-      setPaperMetadata(prev => ({ ...prev, subject: filters.subject, grade: filters.grade }));
-      
-      setTimeout(() => {
-        const target = document.getElementById('question-listing-top');
-        if (target) {
-          const navHeight = window.innerWidth >= 768 ? 80 : 64;
-          const targetPosition = target.getBoundingClientRect().top + window.pageYOffset - navHeight - 20;
-          window.scrollTo({ top: targetPosition, behavior: 'smooth' });
-        }
-      }, 300);
-    } catch (error) {
-      console.error("Failed to fetch questions", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const toggleQuestionSelection = (id: number) => {
     setSelectedQuestionIds(prev => 
@@ -179,6 +212,11 @@ const App: React.FC = () => {
     setIsExporting(true);
     await exportPaperToPdf(paperMetadata);
     setIsExporting(false);
+  };
+
+  const handleOpenSelector = () => {
+    setIsSelectorMinimized(false);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   if (dbInitializing) {
@@ -334,23 +372,20 @@ const App: React.FC = () => {
           <div className="w-full">
             {mode === AppMode.BANK ? (
               <div className="space-y-8 md:space-y-12">
-                <div className="w-full animate-in fade-in slide-in-from-top-4 duration-500">
+                {/* Collapsable Selection Panel */}
+                <div 
+                  ref={selectorRef}
+                  className={`w-full overflow-hidden transition-all duration-700 ease-in-out ${isSelectorMinimized ? 'max-h-0 opacity-0 mb-0' : 'max-h-[2000px] opacity-100 mb-8 md:mb-12'}`}
+                >
                   <SelectionPanel 
                     initialFilters={selectionFilters}
-                    onScopeChange={handleScopeChange} 
+                    onScopeChange={handleScopeChange}
+                    onUpdateDraft={setDraftFilters}
+                    isMinimized={isSelectorMinimized}
                   />
                 </div>
 
-                <div id="question-listing-top" className="relative py-4">
-                  <div className="absolute inset-0 flex items-center" aria-hidden="true">
-                    <div className="w-full border-t-2 border-slate-200"></div>
-                  </div>
-                  <div className="relative flex justify-center">
-                    <span className="bg-[#f8fafc] px-6 text-[10px] font-black text-slate-400 uppercase tracking-[0.5em]">Inventory Stream</span>
-                  </div>
-                </div>
-
-                <section className="min-w-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <section id="question-listing-results" className="min-w-0 animate-in fade-in slide-in-from-bottom-4 duration-500">
                   <QuestionListing 
                     questions={questions} 
                     loading={loading}
@@ -359,6 +394,8 @@ const App: React.FC = () => {
                     onToggleAll={setBulkQuestionSelection}
                     metadata={paperMetadata}
                     onDesignPaper={() => setMode(AppMode.PAPER)}
+                    onOpenSelector={handleOpenSelector}
+                    isSelectorMinimized={isSelectorMinimized}
                   />
                 </section>
               </div>
