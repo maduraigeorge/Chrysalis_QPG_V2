@@ -37,7 +37,7 @@ interface Props {
   }) => void;
   isMinimized?: boolean;
   // FIX: Add a new ref prop to point to the heading
-  headingRef?: React.RefObject<HTMLDivElement>;
+  headingRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 const SelectionPanel: React.FC<Props> = ({ initialFilters, onScopeChange, onUpdateDraft, isMinimized, headingRef }) => {

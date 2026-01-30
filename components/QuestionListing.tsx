@@ -23,7 +23,7 @@ import {
   CheckSquare,
   MinusSquare,
   Filter,
-  Maximize2
+  RefreshCw
 } from 'lucide-react';
 import { Question, PaperMetadata } from '../types';
 import { exportBankToWord } from '../utils/DocxExporter';
@@ -46,7 +46,7 @@ const cleanText = (text: string) => {
   return text.replace(/^\[item[_\- ]?\d+\]\s*/i, '').replace(/\s*\[Set \d+\-\d+\]$/i, '').trim();
 };
 
-const QuestionListing: React.FC<Props> = ({ 
+export default function QuestionListing({ 
   questions, 
   loading, 
   selectedIds, 
@@ -56,34 +56,81 @@ const QuestionListing: React.FC<Props> = ({
   onDesignPaper, 
   onOpenSelector,
   isSelectorMinimized 
-}) => {
+}: Props): React.ReactElement {
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
-  // FIX: Declare loading skeleton items outside the JSX render to ensure type inference is stable.
+  // Sorting states
+  const [currentSort, setCurrentSort] = useState<'default' | 'difficulty-asc' | 'difficulty-desc' | 'lesson-asc' | 'lesson-desc'>('default');
+  
+  // Filtering states
+  const [activeFilters, setActiveFilters] = useState({ type: '', marks: '', lesson: '', difficulty: '' });
+  const [appliedFilters, setAppliedFilters] = useState({ type: '', marks: '', lesson: '', difficulty: '' });
+
   const loadingSkeletonItems: number[] = [1, 2, 3];
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
-        setIsExportMenuOpen(false);
-      }
+      if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) setIsExportMenuOpen(false);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  const { availableTypes, availableMarks, availableLessons } = useMemo(() => {
+    const types = [...new Set(questions.map(q => q.question_type))];
+    // DO: add comment above each fix.
+    // Fix: Explicitly type sort function parameters as numbers to resolve arithmetic operation error.
+    const marks = [...new Set(questions.map(q => q.marks))].sort((a: number, b: number) => a - b);
+    const lessonMap = new Map<number, string>();
+    questions.forEach(q => {
+      if (q.lesson_id && q.lesson_title && !lessonMap.has(q.lesson_id)) {
+        lessonMap.set(q.lesson_id, q.lesson_title);
+      }
+    });
+    const lessons = Array.from(lessonMap, ([id, title]) => ({ id, title }));
+    return { availableTypes: types, availableMarks: marks, availableLessons: lessons };
+  }, [questions]);
+
+  const filteredQuestions = useMemo(() => {
+    return questions.filter(q => {
+      const typeMatch = !appliedFilters.type || q.question_type === appliedFilters.type;
+      const marksMatch = !appliedFilters.marks || q.marks === Number(appliedFilters.marks);
+      const lessonMatch = !appliedFilters.lesson || q.lesson_id === Number(appliedFilters.lesson);
+      const difficultyMatch = !appliedFilters.difficulty || q.difficulty === Number(appliedFilters.difficulty);
+      return typeMatch && marksMatch && lessonMatch && difficultyMatch;
+    });
+  }, [questions, appliedFilters]);
+
   const groupedQuestions = useMemo(() => {
     const groups: Record<number, Record<string, Question[]>> = {};
-    questions.forEach(q => {
+    filteredQuestions.forEach(q => {
       if (!groups[q.marks]) groups[q.marks] = {};
       if (!groups[q.marks][q.question_type]) groups[q.marks][q.question_type] = [];
       groups[q.marks][q.question_type].push(q);
     });
-    return groups;
-  }, [questions]);
 
-  // FIX: Explicitly define the return type of `useMemo` for `sortedMarks` as `number[]` to resolve TypeScript error where `sortedMarks` was inferred as `unknown`.
+    for (const marksKey in groups) {
+      for (const typeKey in groups[marksKey]) {
+        groups[marksKey][typeKey].sort((a, b) => {
+          switch (currentSort) {
+            case 'difficulty-asc':
+              return a.difficulty - b.difficulty;
+            case 'difficulty-desc':
+              return b.difficulty - a.difficulty;
+            case 'lesson-asc':
+              return (a.lesson_title || '').localeCompare(b.lesson_title || '');
+            case 'lesson-desc':
+              return (b.lesson_title || '').localeCompare(a.lesson_title || '');
+            default:
+              return 0;
+          }
+        });
+      }
+    }
+    return groups;
+  }, [filteredQuestions, currentSort]);
+
   const sortedMarks = useMemo<number[]>(() => {
     return (Object.keys(groupedQuestions) as string[]).map(Number).sort((a, b) => a - b);
   }, [groupedQuestions]);
@@ -95,6 +142,17 @@ const QuestionListing: React.FC<Props> = ({
     const shouldSelectAll = !allSelected;
     onToggleAll(questions.map(q => q.id), shouldSelectAll);
   };
+  
+  const handleApplyFilters = () => {
+    setAppliedFilters(activeFilters);
+  };
+
+  const handleResetFilters = () => {
+    setActiveFilters({ type: '', marks: '', lesson: '', difficulty: '' });
+    setAppliedFilters({ type: '', marks: '', lesson: '', difficulty: '' });
+  };
+
+  const activeFilterCount = Object.values(appliedFilters).filter(Boolean).length;
 
   const handleDesignPaperClick = () => {
     if (selectedIds.length < 5) {
@@ -107,7 +165,6 @@ const QuestionListing: React.FC<Props> = ({
   };
 
   const handleExportWord = () => {
-    // FIX: Explicitly type 'selected' as Question[] for robust type inference.
     const selected: Question[] = questions.filter(q => selectedIds.includes(q.id));
     if (selected.length === 0) return;
     exportBankToWord(selected, metadata);
@@ -115,7 +172,6 @@ const QuestionListing: React.FC<Props> = ({
   };
 
   const handleExportRtf = () => {
-    // FIX: Explicitly type 'selected' as Question[] for robust type inference.
     const selected: Question[] = questions.filter(q => selectedIds.includes(q.id));
     if (selected.length === 0) return;
     exportBankToRtf(selected, metadata);
@@ -123,12 +179,13 @@ const QuestionListing: React.FC<Props> = ({
   };
 
   const handleExportExcel = () => {
-    // FIX: Explicitly type 'selected' as Question[] to resolve potential TypeScript inference issues.
     const selected: Question[] = questions.filter(q => selectedIds.includes(q.id));
     if (selected.length === 0) return;
     
     const headers = ['ID', 'Marks', 'Type', 'Question', 'Answer Key', 'Lesson', 'Learning Outcome', 'Difficulty'];
-    const rows = selected.map(q => [
+    // DO: add comment above each fix.
+    // Fix: Explicitly type 'rows' as an array of arrays of strings/numbers to prevent it from being inferred as 'unknown'.
+    const rows: (string | number)[][] = selected.map(q => [
       q.id,
       q.marks,
       q.question_type,
@@ -155,7 +212,6 @@ const QuestionListing: React.FC<Props> = ({
   if (loading) {
     return (
       <div className="space-y-4">
-        {/* FIX: Use the pre-declared array for mapping to avoid potential type inference issues with inline literals in some environments. */}
         {loadingSkeletonItems.map(i => (
           <div key={i} className="bg-white p-4 md:p-6 rounded-2xl border-2 border-slate-300 animate-pulse flex gap-3 md:gap-5">
             <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-100 rounded-xl shrink-0"></div>
@@ -212,12 +268,6 @@ const QuestionListing: React.FC<Props> = ({
           )}
 
           <div className="hidden sm:block h-6 w-0.5 bg-slate-200"></div>
-
-          {/* FIX: Removed the total items counter from the sticky header. */}
-          {/* FIX: Removed the "Sync Ready" text from the sticky header. */}
-          <div className="hidden sm:flex flex-col items-end mr-1">
-            {/* The previous span for "Sync Ready" was here. It is now removed. */}
-          </div>
           
           <button 
             onClick={handleBulkToggle}
@@ -231,11 +281,70 @@ const QuestionListing: React.FC<Props> = ({
             ) : (
               <Square size={13} strokeWidth={3} />
             )}
-            {/* Changed from 'None' to 'Unselect All' and removed hidden/xs:inline for consistent visibility */}
             <span>{allSelected ? 'Unselect All' : 'Select All'}</span>
           </button>
         </div>
       </div>
+
+      {/* Horizontal Control Bar */}
+      <div className="bg-white/80 backdrop-blur-sm p-3 rounded-2xl border-2 border-slate-300 shadow-md">
+        <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
+          {/* Filter controls */}
+          <div className="flex-grow space-y-1.5 min-w-[100px]">
+            <label className="text-[8px] font-black text-slate-600 uppercase tracking-widest ml-1">Type</label>
+            <select value={activeFilters.type} onChange={e => setActiveFilters(f => ({...f, type: e.target.value}))} className="w-full bg-slate-50 border-2 border-slate-300 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-800 shadow-inner">
+              <option value="">All</option>
+              {availableTypes.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div className="flex-grow space-y-1.5 min-w-[100px]">
+            <label className="text-[8px] font-black text-slate-600 uppercase tracking-widest ml-1">Marks</label>
+            <select value={activeFilters.marks} onChange={e => setActiveFilters(f => ({...f, marks: e.target.value}))} className="w-full bg-slate-50 border-2 border-slate-300 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-800 shadow-inner">
+              <option value="">All</option>
+              {availableMarks.map(m => <option key={m} value={m}>{m}</option>)}
+            </select>
+          </div>
+          <div className="flex-grow space-y-1.5 min-w-[100px]">
+            <label className="text-[8px] font-black text-slate-600 uppercase tracking-widest ml-1">Difficulty</label>
+            <select value={activeFilters.difficulty} onChange={e => setActiveFilters(f => ({...f, difficulty: e.target.value}))} className="w-full bg-slate-50 border-2 border-slate-300 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-800 shadow-inner">
+              <option value="">All</option>
+              <option value="1">Basic</option>
+              <option value="2">Medium</option>
+              <option value="3">Hard</option>
+            </select>
+          </div>
+          <div className="flex-grow space-y-1.5 basis-[200px]">
+            <label className="text-[8px] font-black text-slate-600 uppercase tracking-widest ml-1">Lesson</label>
+            <select value={activeFilters.lesson} onChange={e => setActiveFilters(f => ({...f, lesson: e.target.value}))} className="w-full bg-slate-50 border-2 border-slate-300 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-800 shadow-inner">
+              <option value="">All</option>
+              {availableLessons.map(l => <option key={l.id} value={l.id}>{l.title}</option>)}
+            </select>
+          </div>
+          <div className="flex-grow space-y-1.5 min-w-[150px]">
+            <label className="text-[8px] font-black text-slate-600 uppercase tracking-widest ml-1">Sort By</label>
+            <select 
+              value={currentSort} 
+              onChange={e => setCurrentSort(e.target.value as any)} 
+              className="w-full bg-slate-50 border-2 border-slate-300 rounded-lg px-2 py-1.5 text-[10px] font-bold text-slate-800 shadow-inner"
+            >
+              <option value="default">Default Order</option>
+              <option value="difficulty-asc">Difficulty: Low to High</option>
+              <option value="difficulty-desc">Difficulty: High to Low</option>
+              <option value="lesson-asc">Lesson: A-Z</option>
+              <option value="lesson-desc">Lesson: Z-A</option>
+            </select>
+          </div>
+          <div className="flex gap-2 items-center">
+            <button onClick={handleApplyFilters} className="flex items-center justify-center gap-2 bg-indigo-700 text-white px-3 py-2 rounded-lg font-black text-[9px] uppercase tracking-widest shadow-lg hover:brightness-110 active:scale-95 border-2 border-indigo-500">
+              <Filter size={12} strokeWidth={3}/> Apply
+            </button>
+            <button onClick={handleResetFilters} className="p-2 bg-white text-slate-600 rounded-lg border-2 border-slate-300 hover:bg-slate-50 active:scale-95 shadow-md" title="Reset Filters">
+              <RefreshCw size={14} />
+            </button>
+          </div>
+        </div>
+      </div>
+
 
       <div className="pt-2">
         {sortedMarks.map(marks => (
@@ -319,6 +428,15 @@ const QuestionListing: React.FC<Props> = ({
             </div>
           </div>
         ))}
+        {filteredQuestions.length === 0 && activeFilterCount > 0 && (
+           <div className="text-center py-16">
+             <div className="w-16 h-16 bg-white border-4 border-dashed border-slate-300 rounded-full flex items-center justify-center mx-auto mb-4">
+               <Filter size={32} className="text-slate-400" />
+             </div>
+             <h4 className="text-lg font-black text-slate-700">No Matches Found</h4>
+             <p className="text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Try adjusting your filters</p>
+           </div>
+        )}
       </div>
 
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t-4 border-slate-500 py-3 md:py-3 z-[100] flex justify-center no-print shadow-[0_-15px_50px_rgba(0,0,0,0.3)] h-auto md:h-20 items-center">
@@ -328,12 +446,10 @@ const QuestionListing: React.FC<Props> = ({
                   <span className="text-[8px] md:text-[9px] font-black text-slate-600 uppercase tracking-widest">Active Workbench</span>
                   <div className="flex items-center gap-3">
                      <div className="bg-indigo-700 text-white px-3 md:px-4 py-1 md:py-1.5 rounded-xl font-black text-base md:text-lg border-2 border-indigo-400 shrink-0 shadow-lg">
-                       {/* FIX: Changed to show selected / total questions */}
                        {selectedIds.length} / {questions.length}
                      </div>
                      <div className="flex flex-col">
                         <span className="text-[10px] md:text-xs font-black text-slate-900 tracking-tight">Selected Items</span>
-                        {/* FIX: Changed label for clarity */}
                         <span className="text-[7px] md:text-[8px] font-bold text-slate-600 uppercase tracking-widest">Total Inventory</span>
                      </div>
                   </div>
@@ -384,6 +500,4 @@ const QuestionListing: React.FC<Props> = ({
       </div>
     </div>
   );
-};
-
-export default QuestionListing;
+}

@@ -29,7 +29,8 @@ import {
   Loader2,
   FileDown as PdfIcon,
   Target,
-  LayoutDashboard
+  LayoutDashboard,
+  Star
 } from 'lucide-react';
 import { Question, PaperMetadata, Section } from '../types';
 import { apiService } from '../apiService';
@@ -525,9 +526,13 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                                       )}
                                       <p className={`text-[10px] md:text-[11px] font-bold leading-tight ${sel ? 'text-indigo-950' : 'text-slate-900'}`}>{cleanText(q.question_text)}</p>
                                    </div>
-                                   <div className="flex gap-1.5 md:gap-2">
-                                      {q.answer_key && <span className="bg-emerald-50 px-1.5 md:px-2 py-0.5 rounded text-[7px] md:text-[8px] font-black text-emerald-900 border border-emerald-300 shadow-sm">Key: {q.answer_key.substring(0,30)}...</span>}
+                                   <div className="flex flex-wrap items-center gap-1.5 md:gap-2 pt-1">
+                                      {q.answer_key && <span className="flex items-center gap-1 bg-emerald-50 px-1.5 md:px-2 py-0.5 rounded text-[7px] md:text-[8px] font-black text-emerald-900 border border-emerald-300 shadow-sm"><Key size={8} /> Key: {q.answer_key.substring(0,30)}...</span>}
                                       <span className="bg-indigo-50 px-1.5 md:px-2 py-0.5 rounded text-[7px] md:text-[8px] font-black text-indigo-900 border border-indigo-300 shadow-sm truncate max-w-[80px] sm:max-w-none">{q.lesson_title}</span>
+                                      <div className={`flex items-center gap-1 px-2 py-0.5 rounded text-[7px] font-black uppercase tracking-widest border shadow-sm ${q.difficulty === 1 ? 'bg-emerald-50 text-emerald-800 border-emerald-300' : q.difficulty === 2 ? 'bg-amber-50 text-amber-800 border-amber-300' : 'bg-rose-50 text-rose-800 border-rose-300'}`}>
+                                        <Star size={8} fill="currentColor" />
+                                        {q.difficulty === 1 ? 'Basic' : q.difficulty === 2 ? 'Medium' : 'Hard'}
+                                      </div>
                                    </div>
                                 </div>
                               </div>
@@ -672,13 +677,13 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                 <button onClick={() => setIsModalOpen(false)} className="hover:bg-white/10 p-2 md:p-3 rounded-xl transition-all relative z-10 border-2 border-white/10"><X size={24} /></button>
              </div>
              <div className="p-6 md:p-8 space-y-4 md:space-y-6">
-                <div className="grid grid-cols-2 gap-3 md:gap-4">
-                   <div className="space-y-1.5">
-                      <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Type Mapping</label>
+                <div className="grid grid-cols-3 gap-3 md:gap-4">
+                   <div className="space-y-1.5 col-span-1">
+                      <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Type</label>
                       <div className="bg-slate-100 px-3 md:px-5 py-2 md:py-3 rounded-xl text-xs md:text-sm font-black text-indigo-900 border-2 border-slate-300 shadow-inner truncate">{editingQuestion.question_type}</div>
                    </div>
-                   <div className="space-y-1.5">
-                      <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Weightage (Min 0)</label>
+                   <div className="space-y-1.5 col-span-1">
+                      <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Weightage</label>
                       <input 
                         type="number" 
                         min="0"
@@ -686,6 +691,18 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                         onChange={e => setEditingQuestion({...editingQuestion, marks: Math.max(0, Number(e.target.value))})}
                         className="w-full bg-white border-2 border-slate-400 rounded-xl px-3 md:px-5 py-2 md:py-3 text-xs md:text-sm font-black text-indigo-800 focus:border-indigo-600 shadow-sm"
                       />
+                   </div>
+                   <div className="space-y-1.5 col-span-1">
+                      <label className="text-[8px] md:text-[9px] font-black text-slate-700 uppercase tracking-widest ml-1">Difficulty</label>
+                      <select 
+                        value={editingQuestion.difficulty || 1}
+                        onChange={e => setEditingQuestion({...editingQuestion, difficulty: Number(e.target.value)})}
+                        className="w-full bg-white border-2 border-slate-400 rounded-xl px-3 md:px-5 py-2 md:py-3 text-xs md:text-sm font-black text-indigo-800 focus:border-indigo-600 shadow-sm"
+                      >
+                        <option value={1}>Basic</option>
+                        <option value={2}>Medium</option>
+                        <option value={3}>Hard</option>
+                      </select>
                    </div>
                 </div>
                 <div className="space-y-1.5">

@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
@@ -18,7 +19,8 @@ import {
   ChevronRight,
   Check,
   Settings,
-  Key
+  Key,
+  Star
 } from 'lucide-react';
 import { apiService } from '../apiService';
 import { Lesson, LearningOutcome, Question } from '../types';
@@ -42,7 +44,7 @@ const AdminPanel: React.FC = () => {
 
   const [questionForm, setQuestionForm] = useState({
     subject: SUBJECTS[0], grade: GRADES[0], lessonId: '', loId: '',
-    type: QUESTION_TYPES[0], marks: 1, text: '', answerKey: '', imageUrl: ''
+    type: QUESTION_TYPES[0], marks: 1, text: '', answerKey: '', imageUrl: '', difficulty: 1
   });
 
   const [curriculumForm, setCurriculumForm] = useState({
@@ -164,6 +166,13 @@ const AdminPanel: React.FC = () => {
     if (type === 'lo') loadLoExplorer();
   };
 
+  const getDifficultyClass = (d: number) => {
+    if (d === 1) return 'text-emerald-600 font-bold';
+    if (d === 2) return 'text-amber-600 font-bold';
+    if (d === 3) return 'text-rose-600 font-bold';
+    return 'text-slate-600';
+  }
+
   return (
     <div className="max-w-[1500px] mx-auto space-y-16 pb-48">
       <div className="flex items-center justify-between">
@@ -190,7 +199,7 @@ const AdminPanel: React.FC = () => {
         <div className="space-y-16">
           <div className="bg-white rounded-[3.5rem] shadow-2xl border border-slate-50 p-12 space-y-10">
             <h2 className="text-2xl font-black text-slate-900 flex items-center gap-5"><div className="p-3 bg-indigo-50 text-indigo-500 rounded-2xl shadow-sm"><Plus /></div> New Question</h2>
-            <form onSubmit={async (e) => { e.preventDefault(); setIsSubmitting(true); await apiService.createQuestion({ subject: questionForm.subject, grade: questionForm.grade, lesson_id: Number(questionForm.lessonId), learning_outcome_id: questionForm.loId ? Number(questionForm.loId) : null, question_type: questionForm.type, marks: Number(questionForm.marks), question_text: questionForm.text, answer_key: questionForm.answerKey, image_url: questionForm.imageUrl || null, difficulty: 1 }); setIsSubmitting(false); setQuestionForm({...questionForm, text: '', answerKey: '', imageUrl: ''}); loadQuestionExplorer(); showSuccess("Question logged."); }} className="space-y-10">
+            <form onSubmit={async (e) => { e.preventDefault(); setIsSubmitting(true); await apiService.createQuestion(questionForm); setIsSubmitting(false); setQuestionForm({...questionForm, text: '', answerKey: '', imageUrl: ''}); loadQuestionExplorer(); showSuccess("Question logged."); }} className="space-y-10">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                 {['Subject', 'Grade', 'Lesson', 'Outcome'].map((label, i) => (
                   <div key={label} className="space-y-3">
@@ -208,6 +217,24 @@ const AdminPanel: React.FC = () => {
                     </select>
                   </div>
                 ))}
+              </div>
+               <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Type</label>
+                    <select className="w-full bg-slate-50 rounded-[1.5rem] px-8 py-5 font-bold border-transparent border focus:bg-white shadow-inner" value={questionForm.type} onChange={e => setQuestionForm({...questionForm, type: e.target.value})}>{QUESTION_TYPES.map(t=><option key={t}>{t}</option>)}</select>
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Marks</label>
+                    <input type="number" min="1" className="w-full bg-slate-50 rounded-[1.5rem] px-8 py-5 font-bold border-transparent border focus:bg-white shadow-inner" value={questionForm.marks} onChange={e => setQuestionForm({...questionForm, marks: Number(e.target.value)})} />
+                  </div>
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-2">Difficulty</label>
+                    <select className="w-full bg-slate-50 rounded-[1.5rem] px-8 py-5 font-bold border-transparent border focus:bg-white shadow-inner" value={questionForm.difficulty} onChange={e => setQuestionForm({...questionForm, difficulty: Number(e.target.value)})}>
+                      <option value={1}>Basic</option>
+                      <option value={2}>Medium</option>
+                      <option value={3}>Hard</option>
+                    </select>
+                  </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                 <div className="space-y-3">
@@ -246,6 +273,7 @@ const AdminPanel: React.FC = () => {
                          <th className="px-12 py-6 font-black text-slate-400 uppercase tracking-widest w-1/3">Question Content</th>
                          <th className="px-12 py-6 font-black text-slate-400 uppercase tracking-widest w-1/4">Answer Key</th>
                          <th className="px-12 py-6 font-black text-slate-400 uppercase tracking-widest">Weight & Type</th>
+                         <th className="px-12 py-6 font-black text-slate-400 uppercase tracking-widest">Difficulty</th>
                          <th className="px-12 py-6 font-black text-slate-400 uppercase tracking-widest text-right">Action Bar</th>
                       </tr>
                    </thead>
@@ -307,6 +335,17 @@ const AdminPanel: React.FC = () => {
                                     </>
                                   )}
                                </div>
+                            </td>
+                            <td className="px-12 py-8">
+                               {isEditing ? (
+                                  <select className="text-[10px] font-black border border-indigo-200 rounded p-1 bg-white" value={editBuffer.difficulty} onChange={e => setEditBuffer({...editBuffer, difficulty: Number(e.target.value)})}>
+                                    <option value={1}>Basic</option>
+                                    <option value={2}>Medium</option>
+                                    <option value={3}>Hard</option>
+                                  </select>
+                               ) : (
+                                <span className={getDifficultyClass(q.difficulty)}>{q.difficulty === 1 ? 'Basic' : q.difficulty === 2 ? 'Medium' : 'Hard'}</span>
+                               )}
                             </td>
                             <td className="px-12 py-8 text-right">
                                <div className="flex items-center justify-end gap-3 transition-all">
