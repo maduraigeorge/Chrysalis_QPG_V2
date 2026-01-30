@@ -1,3 +1,4 @@
+
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { 
   Image as ImageIcon, 
@@ -112,7 +113,8 @@ const QuestionListing: React.FC<Props> = ({
   };
 
   const handleExportExcel = () => {
-    const selected = questions.filter(q => selectedIds.includes(q.id));
+    // FIX: Explicitly type 'selected' as Question[] to resolve potential TypeScript inference issues.
+    const selected: Question[] = questions.filter(q => selectedIds.includes(q.id));
     if (selected.length === 0) return;
     
     const headers = ['ID', 'Marks', 'Type', 'Question', 'Answer Key', 'Lesson', 'Learning Outcome', 'Difficulty'];

@@ -6,7 +6,7 @@ import {
   ClipboardList, 
   Settings2,
   AlertCircle,
-  Check, // Changed from CheckCircle2 to Check
+  Check, 
   Image as ImageIcon,
   Building2,
   X,
@@ -381,9 +381,7 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
                <p className="text-[7px] md:text-[8px] font-black text-slate-500 uppercase tracking-[0.2em] mt-1">Structure Assessment Hierarchy</p>
              </div>
           </div>
-          <button onClick={addSection} className="w-full md:w-auto bg-white border-2 md:border-4 border-indigo-700 text-indigo-700 px-4 md:px-5 py-2 md:py-2.5 rounded-xl text-[8px] md:text-[9px] font-black uppercase tracking-widest hover:bg-indigo-700 hover:text-white transition-all shadow-xl active:scale-95 flex items-center justify-center gap-2">
-            <Plus className="w-3.5 h-3.5 md:w-4 md:h-4" strokeWidth={4} /> Add Section
-          </button>
+          {/* Removed the redundant "Add Section" button here */}
         </div>
 
         <div className="space-y-4">
@@ -562,7 +560,7 @@ const QuestionPaperCreator: React.FC<Props> = ({ questions, metadata, onMetadata
         </div>
       </div>
 
-      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-4 border-slate-500 py-3 md:py-3 z-[100] flex justify-center no-print shadow-[0_-15px_50px_rgba(0,0,0,0.4)] h-auto md:h-20 items-center">
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t-4 border-slate-500 py-3 md:py-3 z-[100] flex justify-center no-print shadow-[0_-15px_50px_rgba(0,0,0,0.3)] h-auto md:h-20 items-center">
          <div className="max-w-[1600px] w-full flex flex-col md:flex-row items-center justify-between gap-3 md:gap-8 px-4 md:px-12 h-full py-3 md:py-0">
             <div className="flex items-center gap-4 md:gap-6 shrink-0 w-full md:w-auto">
                <div className="flex flex-col gap-1 w-full">
