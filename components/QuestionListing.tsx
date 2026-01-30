@@ -60,6 +60,9 @@ const QuestionListing: React.FC<Props> = ({
   const [isExportMenuOpen, setIsExportMenuOpen] = useState(false);
   const exportMenuRef = useRef<HTMLDivElement>(null);
 
+  // FIX: Declare loading skeleton items outside the JSX render to ensure type inference is stable.
+  const loadingSkeletonItems: number[] = [1, 2, 3];
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (exportMenuRef.current && !exportMenuRef.current.contains(event.target as Node)) {
@@ -80,6 +83,11 @@ const QuestionListing: React.FC<Props> = ({
     return groups;
   }, [questions]);
 
+  // FIX: Explicitly define the return type of `useMemo` for `sortedMarks` as `number[]` to resolve TypeScript error where `sortedMarks` was inferred as `unknown`.
+  const sortedMarks = useMemo<number[]>(() => {
+    return (Object.keys(groupedQuestions) as string[]).map(Number).sort((a, b) => a - b);
+  }, [groupedQuestions]);
+
   const allSelected = questions.length > 0 && selectedIds.length === questions.length;
   const someSelected = selectedIds.length > 0 && selectedIds.length < questions.length;
 
@@ -99,14 +107,16 @@ const QuestionListing: React.FC<Props> = ({
   };
 
   const handleExportWord = () => {
-    const selected = questions.filter(q => selectedIds.includes(q.id));
+    // FIX: Explicitly type 'selected' as Question[] for robust type inference.
+    const selected: Question[] = questions.filter(q => selectedIds.includes(q.id));
     if (selected.length === 0) return;
     exportBankToWord(selected, metadata);
     setIsExportMenuOpen(false);
   };
 
   const handleExportRtf = () => {
-    const selected = questions.filter(q => selectedIds.includes(q.id));
+    // FIX: Explicitly type 'selected' as Question[] for robust type inference.
+    const selected: Question[] = questions.filter(q => selectedIds.includes(q.id));
     if (selected.length === 0) return;
     exportBankToRtf(selected, metadata);
     setIsExportMenuOpen(false);
@@ -145,7 +155,8 @@ const QuestionListing: React.FC<Props> = ({
   if (loading) {
     return (
       <div className="space-y-4">
-        {[1, 2, 3].map(i => (
+        {/* FIX: Use the pre-declared array for mapping to avoid potential type inference issues with inline literals in some environments. */}
+        {loadingSkeletonItems.map(i => (
           <div key={i} className="bg-white p-4 md:p-6 rounded-2xl border-2 border-slate-300 animate-pulse flex gap-3 md:gap-5">
             <div className="w-8 h-8 md:w-10 md:h-10 bg-slate-100 rounded-xl shrink-0"></div>
             <div className="flex-1 space-y-3">
@@ -171,8 +182,6 @@ const QuestionListing: React.FC<Props> = ({
       </div>
     );
   }
-
-  const sortedMarks = Object.keys(groupedQuestions).map(Number).sort((a, b) => a - b);
 
   return (
     <div className="space-y-6 md:space-y-8 pb-40 relative">
@@ -204,9 +213,10 @@ const QuestionListing: React.FC<Props> = ({
 
           <div className="hidden sm:block h-6 w-0.5 bg-slate-200"></div>
 
+          {/* FIX: Removed the total items counter from the sticky header. */}
+          {/* FIX: Removed the "Sync Ready" text from the sticky header. */}
           <div className="hidden sm:flex flex-col items-end mr-1">
-            <span className="text-[10px] md:text-xs font-black text-slate-900 leading-none">{questions.length} Items</span>
-            <span className="text-[7px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Sync Ready</span>
+            {/* The previous span for "Sync Ready" was here. It is now removed. */}
           </div>
           
           <button 
@@ -256,7 +266,7 @@ const QuestionListing: React.FC<Props> = ({
                       >
                         <div className="flex gap-3 md:gap-4 items-start">
                           <div className={`w-6 h-6 md:w-7 md:h-7 rounded-lg border-2 flex items-center justify-center shrink-0 transition-all mt-0.5 
-                          ${selectedIds.includes(q.id) ? 'bg-indigo-700 border-indigo-700 text-white shadow-md' : 'bg-white border-slate-400 group-hover:border-indigo-500'}`}>
+                          ${selectedIds.includes(q.id) ? 'bg-indigo-700 border-indigo-700 text-white shadow-sm' : 'bg-white border-slate-400 group-hover:border-indigo-500'}`}>
                             {selectedIds.includes(q.id) && <Check size={14} strokeWidth={3} />}
                           </div>
                           
@@ -318,11 +328,13 @@ const QuestionListing: React.FC<Props> = ({
                   <span className="text-[8px] md:text-[9px] font-black text-slate-600 uppercase tracking-widest">Active Workbench</span>
                   <div className="flex items-center gap-3">
                      <div className="bg-indigo-700 text-white px-3 md:px-4 py-1 md:py-1.5 rounded-xl font-black text-base md:text-lg border-2 border-indigo-400 shrink-0 shadow-lg">
-                       {selectedIds.length}
+                       {/* FIX: Changed to show selected / total questions */}
+                       {selectedIds.length} / {questions.length}
                      </div>
                      <div className="flex flex-col">
                         <span className="text-[10px] md:text-xs font-black text-slate-900 tracking-tight">Selected Items</span>
-                        <span className="text-[7px] md:text-[8px] font-bold text-slate-600 uppercase tracking-widest">Ready for export</span>
+                        {/* FIX: Changed label for clarity */}
+                        <span className="text-[7px] md:text-[8px] font-bold text-slate-600 uppercase tracking-widest">Total Inventory</span>
                      </div>
                   </div>
                </div>

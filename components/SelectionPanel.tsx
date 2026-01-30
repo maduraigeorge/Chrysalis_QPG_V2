@@ -36,9 +36,11 @@ interface Props {
     loIds: number[] 
   }) => void;
   isMinimized?: boolean;
+  // FIX: Add a new ref prop to point to the heading
+  headingRef?: React.RefObject<HTMLDivElement>;
 }
 
-const SelectionPanel: React.FC<Props> = ({ initialFilters, onScopeChange, onUpdateDraft, isMinimized }) => {
+const SelectionPanel: React.FC<Props> = ({ initialFilters, onScopeChange, onUpdateDraft, isMinimized, headingRef }) => {
   const [selectedSubject, setSelectedSubject] = useState(initialFilters.subject);
   const [selectedGrade, setSelectedGrade] = useState(initialFilters.grade);
   const [lessons, setLessons] = useState<Lesson[]>([]);
@@ -193,7 +195,8 @@ const SelectionPanel: React.FC<Props> = ({ initialFilters, onScopeChange, onUpda
 
   return (
     <div className="bg-white rounded-[1.5rem] md:rounded-[2rem] shadow-xl border-4 border-slate-400 overflow-hidden flex flex-col relative">
-      <div className="bg-slate-100 px-5 md:px-8 py-4 md:py-5 border-b-2 border-slate-300 flex items-center justify-between z-20">
+      {/* FIX: Attach headingRef to the main heading div */}
+      <div ref={headingRef} className="bg-slate-100 px-5 md:px-8 py-4 md:py-5 border-b-2 border-slate-300 flex items-center justify-between z-20">
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-xl bg-white border-2 border-slate-400 flex items-center justify-center shadow-sm">
             <Filter className="text-indigo-700 w-5 h-5" strokeWidth={3} />

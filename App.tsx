@@ -43,6 +43,8 @@ const App: React.FC = () => {
   const [dbInitializing, setDbInitializing] = useState(true);
   const [selectedQuestionIds, setSelectedQuestionIds] = useState<number[]>([]);
   const [isSelectorMinimized, setIsSelectorMinimized] = useState(false);
+  // FIX: New state to prevent auto-minimization immediately after manual expand.
+  const [manualExpandActive, setManualExpandActive] = useState(false);
   
   // Persistent selection state
   const [selectionFilters, setSelectionFilters] = useState<{ 
@@ -78,6 +80,8 @@ const App: React.FC = () => {
   
   const [sections, setSections] = useState<Section[]>([]);
   const selectorRef = useRef<HTMLDivElement>(null);
+  // FIX: New ref for the SelectionPanel's heading
+  const selectionPanelHeadingRef = useRef<HTMLDivElement>(null); 
   const lastScrollY = useRef(0);
 
   useEffect(() => {
@@ -130,7 +134,9 @@ const App: React.FC = () => {
       const isScrollingDown = currentScrollY > lastScrollY.current;
       lastScrollY.current = currentScrollY;
 
-      if (mode === AppMode.BANK && questions.length > 0 && !isSelectorMinimized) {
+      // FIX: Add `!manualExpandActive` to prevent auto-minimization
+      // immediately after the user has manually expanded the selector.
+      if (mode === AppMode.BANK && questions.length > 0 && !isSelectorMinimized && !manualExpandActive) {
         if (selectorRef.current) {
           const rect = selectorRef.current.getBoundingClientRect();
           // window.innerHeight * 0.25 is the 1/4 mark from the top (3/4 from bottom)
@@ -146,7 +152,7 @@ const App: React.FC = () => {
 
     window.addEventListener('scroll', handleScroll);
     return () => window.removeEventListener('scroll', handleScroll);
-  }, [mode, questions.length, isSelectorMinimized, draftFilters]);
+  }, [mode, questions.length, isSelectorMinimized, draftFilters, manualExpandActive]); // FIX: Add manualExpandActive to dependencies
 
   const isPaperAligned = useMemo(() => {
     const isMetadataComplete = 
@@ -219,9 +225,19 @@ const App: React.FC = () => {
 
   const handleOpenSelector = () => {
     setIsSelectorMinimized(false);
+    // FIX: Set manualExpandActive to true and reset after a delay
+    setManualExpandActive(true);
+    setTimeout(() => setManualExpandActive(false), 500); // 0.5-second grace period
+    
     // When expanding, immediately set the ref to avoid accidental triggers
-    lastScrollY.current = 0; 
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    lastScrollY.current = window.scrollY; // Set to current scroll position, not 0
+    
+    // FIX: Scroll to the selector panel's heading for better focus
+    if (selectionPanelHeadingRef.current) {
+      const navHeight = window.innerWidth >= 768 ? 80 : 64; // Adjust based on your nav height
+      const offsetTop = selectionPanelHeadingRef.current.offsetTop - navHeight - 10; // 10px extra padding
+      window.scrollTo({ top: offsetTop, behavior: 'smooth' });
+    }
   };
 
   if (dbInitializing) {
@@ -387,6 +403,8 @@ const App: React.FC = () => {
                     onScopeChange={handleScopeChange}
                     onUpdateDraft={setDraftFilters}
                     isMinimized={isSelectorMinimized}
+                    // FIX: Pass the new headingRef to SelectionPanel
+                    headingRef={selectionPanelHeadingRef}
                   />
                 </div>
 
